@@ -8,7 +8,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/petrjanda/frax/llm"
+	"github.com/petrjanda/frax/pkg/adapters/openai"
+	"github.com/petrjanda/frax/pkg/llm"
 )
 
 // MathCalculator implements the Tool interface for basic math operations
@@ -118,7 +119,7 @@ func main() {
 
 	// Create OpenAI adapter
 	fmt.Println("🔑 Creating OpenAI adapter...")
-	openaiLLM, err := llm.NewOpenAIAdapter(apiKey, llm.WithModel("gpt-4o"))
+	openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel("gpt-4o"))
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}

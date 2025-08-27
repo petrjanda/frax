@@ -8,16 +8,18 @@ The framework is organized into a clean, modular structure:
 
 ```
 frax/
-├── main.go                 # Main application entry point
-├── llm/                    # Core LLM package
-│   ├── agent.go           # Agent interface and implementation
-│   ├── llm.go             # LLM interface, requests, responses
-│   ├── messages.go        # Message interface and implementations
-│   ├── tool.go            # Tool interface
-│   ├── types.go           # Generic Task and Eval interfaces
-│   └── openai.go          # OpenAI API adapter
+├── pkg/                    # All packages
+│   ├── llm/               # Core LLM package (generic)
+│   │   ├── agent.go       # Agent interface and implementation
+│   │   ├── llm.go         # LLM interface, requests, responses
+│   │   ├── messages.go    # Message interface and implementations
+│   │   ├── tool.go        # Tool interface
+│   │   └── types.go       # Generic Task and Eval interfaces
+│   └── adapters/          # LLM provider adapters
+│       └── openai/        # OpenAI API adapter
+│           └── openai.go  # OpenAI-specific implementation
 ├── examples/               # Example implementations
-│   └── simple_tool.go     # Calculator tool example
+│   └── calculator.go      # Calculator tool example
 ├── go.mod                  # Go module file
 └── go.sum                  # Go module checksums
 ```
@@ -74,6 +76,14 @@ response, err := openaiLLM.Invoke(ctx, request)
 go get github.com/petrjanda/frax
 ```
 
+## 📁 Project Structure
+
+The project follows a clean separation of concerns:
+
+- **`pkg/llm/`**: Contains the core, generic LLM interfaces and implementations that are provider-agnostic
+- **`pkg/adapters/`**: Contains specific LLM provider implementations (OpenAI, etc.)
+- **`examples/`**: Contains working examples showing how to use the framework
+
 ## 🔧 Usage Examples
 
 ### Basic OpenAI Integration
@@ -83,12 +93,13 @@ package main
 
 import (
     "context"
-    "github.com/petrjanda/frax/llm"
+    "github.com/petrjanda/frax/pkg/llm"
+    "github.com/petrjanda/frax/pkg/adapters/openai"
 )
 
 func main() {
     // Create OpenAI adapter
-    openaiLLM, err := llm.NewOpenAIAdapter(os.Getenv("OPENAI_API_KEY"))
+    openaiLLM, err := openai.NewOpenAIAdapter(os.Getenv("OPENAI_API_KEY"))
     if err != nil {
         log.Fatal(err)
     }
