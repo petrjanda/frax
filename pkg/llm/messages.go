@@ -7,6 +7,7 @@ import (
 // Message represents a message in the conversation
 type Message interface {
 	Kind() MessageKind
+	Role() MessageRole
 }
 
 // MessageKind represents the type of message
@@ -18,6 +19,15 @@ const (
 	MessageKindToolResult MessageKind = "tool_result"
 )
 
+// MessageRole represents the role of the message sender
+type MessageRole string
+
+const (
+	MessageRoleUser      MessageRole = "user"
+	MessageRoleAssistant MessageRole = "assistant"
+	MessageRoleSystem    MessageRole = "system"
+)
+
 // UserMessage represents a message from the user
 type UserMessage struct {
 	Content string
@@ -25,6 +35,36 @@ type UserMessage struct {
 
 func (m *UserMessage) Kind() MessageKind {
 	return MessageKindText
+}
+
+func (m *UserMessage) Role() MessageRole {
+	return MessageRoleUser
+}
+
+// AssistantMessage represents a message from the assistant
+type AssistantMessage struct {
+	Content string
+}
+
+func (m *AssistantMessage) Kind() MessageKind {
+	return MessageKindText
+}
+
+func (m *AssistantMessage) Role() MessageRole {
+	return MessageRoleAssistant
+}
+
+// SystemMessage represents a system message
+type SystemMessage struct {
+	Content string
+}
+
+func (m *SystemMessage) Kind() MessageKind {
+	return MessageKindText
+}
+
+func (m *SystemMessage) Role() MessageRole {
+	return MessageRoleSystem
 }
 
 // ToolMessage represents a message about a tool
@@ -37,6 +77,10 @@ func (m *ToolMessage) Kind() MessageKind {
 	return MessageKindToolResult
 }
 
+func (m *ToolMessage) Role() MessageRole {
+	return MessageRoleAssistant
+}
+
 // ToolResultMessage represents the result of a tool execution
 type ToolResultMessage struct {
 	ToolCall *ToolCall
@@ -45,6 +89,10 @@ type ToolResultMessage struct {
 
 func (m *ToolResultMessage) Kind() MessageKind {
 	return MessageKindToolResult
+}
+
+func (m *ToolResultMessage) Role() MessageRole {
+	return MessageRoleAssistant
 }
 
 // ToolCall represents a call to a tool

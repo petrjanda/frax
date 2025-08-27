@@ -94,8 +94,8 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 	if len(resp.Choices) > 0 {
 		choice := resp.Choices[0]
 		if choice.Message.Content != "" {
-			// Create a text message from the content
-			textMsg := &llm.UserMessage{Content: choice.Message.Content}
+			// Create an assistant message from the content
+			textMsg := &llm.AssistantMessage{Content: choice.Message.Content}
 			response.AddMessage(textMsg)
 		}
 
@@ -123,6 +123,10 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 		switch m := msg.(type) {
 		case *llm.UserMessage:
 			openaiMessages = append(openaiMessages, openai.UserMessage(m.Content))
+		case *llm.AssistantMessage:
+			openaiMessages = append(openaiMessages, openai.AssistantMessage(m.Content))
+		case *llm.SystemMessage:
+			openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
 		case *llm.ToolResultMessage:
 			// Convert tool result to tool message
 			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.Name))
