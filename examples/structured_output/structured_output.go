@@ -84,55 +84,64 @@ func main() {
 		"required": ["title", "description", "priority", "tags", "due_date"]
 	}`)
 
-	// Create formatters that implement the LLM interface
-	personFormatter := llm.NewBaseFormatter("person_formatter", "Formats person data", personSchema, openaiLLM)
-	taskFormatter := llm.NewBaseFormatter("task_formatter", "Formats task data", taskSchema, openaiLLM)
+	// Create LLMs with structured output that implement the LLM interface
+	personLLM := llm.NewBaseLLMWithStructuredOutput(personSchema, openaiLLM)
+	taskLLM := llm.NewBaseLLMWithStructuredOutput(taskSchema, openaiLLM)
 
-	fmt.Printf("✅ Created person formatter: %s\n", personFormatter.Name())
-	fmt.Printf("✅ Created task formatter: %s\n", taskFormatter.Name())
+	// Example of customizing with options (optional)
+	customLLM := llm.NewBaseLLMWithStructuredOutput(
+		personSchema,
+		openaiLLM,
+		llm.WithName("custom_person_tool"),
+		llm.WithDescription("Custom tool for generating person data with specific requirements"),
+	)
 
-	// Test 3: Use the formatter directly as LLM
-	fmt.Println("\n--- Test 3: Using Formatter Directly as LLM ---")
+	fmt.Printf("✅ Created person LLM with structured output: %s\n", personLLM.Name())
+	fmt.Printf("✅ Created task LLM with structured output: %s\n", taskLLM.Name())
+	fmt.Printf("✅ Created custom LLM with structured output: %s\n", customLLM.Name())
 
-	// Use the person formatter directly - it implements the LLM interface!
-	personResponse2, err := personFormatter.Invoke(ctx, &llm.LLMRequest{
+	// Test 3: Use the LLM with structured output directly
+	fmt.Println("\n--- Test 3: Using LLM with Structured Output Directly ---")
+
+	// Use the person LLM with structured output directly - it implements the LLM interface!
+	personResponse2, err := personLLM.Invoke(ctx, &llm.LLMRequest{
 		History: []llm.Message{
 			&llm.UserMessage{Content: "Generate a person who is a software engineer"},
 		},
 	})
 	if err != nil {
-		log.Printf("❌ Person formatter failed: %v", err)
+		log.Printf("❌ Person LLM with structured output failed: %v", err)
 	} else {
-		log.Printf("✅ Person formatter response: %+v\n", personResponse2.Messages[0])
+		log.Printf("✅ Person LLM with structured output response: %+v\n", personResponse2.Messages[0])
 	}
 
-	// Test 4: Use formatter directly as LLM
-	fmt.Println("\n--- Test 4: Using Formatter Directly as LLM ---")
+	// Test 4: Use LLM with structured output directly as LLM
+	fmt.Println("\n--- Test 4: Using LLM with Structured Output Directly as LLM ---")
 
-	// Use the person formatter directly - it implements the LLM interface!
-	personResponse, err := personFormatter.Invoke(ctx, &llm.LLMRequest{
+	// Use the person LLM with structured output directly - it implements the LLM interface!
+	personResponse, err := personLLM.Invoke(ctx, &llm.LLMRequest{
 		History: []llm.Message{
 			&llm.UserMessage{Content: "Generate a person who is a data scientist"},
 		},
 	})
 	if err != nil {
-		log.Printf("❌ Person formatter failed: %v", err)
+		log.Printf("❌ Person LLM with structured output failed: %v", err)
 	} else {
-		log.Printf("✅ Person formatter response: %+v\n", personResponse.Messages[0])
+		log.Printf("✅ Person LLM with structured output response: %+v\n", personResponse.Messages[0])
 	}
 
-	// Test 5: Use task formatter directly
-	fmt.Println("\n--- Test 5: Using Task Formatter Directly ---")
+	// Test 5: Use task LLM with structured output directly
+	fmt.Println("\n--- Test 5: Using Task LLM with Structured Output Directly ---")
 
-	taskResponse, err := taskFormatter.Invoke(ctx, &llm.LLMRequest{
+	taskResponse, err := taskLLM.Invoke(ctx, &llm.LLMRequest{
 		History: []llm.Message{
 			&llm.UserMessage{Content: "Generate a task related to machine learning"},
 		},
 	})
 	if err != nil {
-		log.Printf("❌ Task formatter failed: %v", err)
+		log.Printf("❌ Task LLM with structured output failed: %v", err)
 	} else {
-		log.Printf("✅ Task formatter response: %+v\n", taskResponse.Messages[0])
+		log.Printf("✅ Task LLM with structured output response: %+v\n", taskResponse.Messages[0])
 	}
 
 	fmt.Println("\n🎉 All tests completed!")
