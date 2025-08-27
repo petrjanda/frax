@@ -55,15 +55,20 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		Messages: messages,
 	}
 
-	// Add tools if provided and tool usage is enabled
-	if request.ToolUsage && len(request.Tools) > 0 {
+	// Handle tool usage based on the ToolUsage strategy
+	if request.ToolUsage != nil && len(request.Tools) > 0 {
 		tools := a.convertTools(request.Tools)
 		chatReq.Tools = tools
-		// For now, we'll omit ToolChoice to let OpenAI use the default behavior
-		// This should resolve the "Missing required parameter: 'tool_choice.function'" error
+
+		// Convert tool usage to OpenAI format
+		toolChoice := convertToolUsage(request.ToolUsage, request.Tools)
+		if toolChoice != nil {
+			chatReq.ToolChoice = *toolChoice
+		}
 
 		// Debug: Log what we're sending
 		fmt.Printf("🔧 Debug: Sending %d tools to OpenAI\n", len(tools))
+		fmt.Printf("🔧 Debug: Tool usage strategy: %s\n", request.ToolUsage.Type())
 		for i, tool := range tools {
 			fmt.Printf("  Tool %d: %+v\n", i+1, tool)
 		}

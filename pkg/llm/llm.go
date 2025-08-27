@@ -13,14 +13,14 @@ type LLM interface {
 type LLMRequest struct {
 	History   []Message
 	Tools     []Tool
-	ToolUsage bool
+	ToolUsage ToolUsage
 }
 
 // LLMRequestOpts represents options for configuring an LLM request
 type LLMRequestOpts = func(*LLMRequest)
 
-// WithToolUsage enables or disables tool usage for the request
-func WithToolUsage(toolUsage bool) LLMRequestOpts {
+// WithToolUsage sets the tool usage strategy for the request
+func WithToolUsage(toolUsage ToolUsage) LLMRequestOpts {
 	return func(r *LLMRequest) {
 		r.ToolUsage = toolUsage
 	}
@@ -35,7 +35,10 @@ func WithTools(tools ...Tool) LLMRequestOpts {
 
 // NewLLMRequest creates a new LLM request with the given options
 func NewLLMRequest(history []Message, opts ...LLMRequestOpts) *LLMRequest {
-	r := &LLMRequest{History: history}
+	r := &LLMRequest{
+		History:   history,
+		ToolUsage: AutoToolSelection(), // Default to auto tool selection
+	}
 	for _, opt := range opts {
 		opt(r)
 	}

@@ -62,11 +62,22 @@ type Tool interface {
 }
 ```
 
-### 5. **OpenAI Adapter** (`llm/openai.go`)
+### 5. **Tool Usage Control** (`pkg/llm/tool_usage.go`)
+Simple control over tool usage behavior:
+
+```go
+// Let the LLM choose automatically (default behavior)
+request := llm.NewLLMRequest(history, llm.WithToolUsage(llm.AutoToolSelection()))
+
+// Force use of a specific tool
+request := llm.NewLLMRequest(history, llm.WithToolUsage(llm.ForceTool("calculator")))
+```
+
+### 6. **OpenAI Adapter** (`pkg/adapters/openai/`)
 A complete implementation of the LLM interface using OpenAI's API:
 
 ```go
-openaiLLM, err := llm.NewOpenAIAdapter(apiKey, llm.WithModel("gpt-4o"))
+openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel("gpt-4o"))
 response, err := openaiLLM.Invoke(ctx, request)
 ```
 
@@ -83,6 +94,15 @@ The project follows a clean separation of concerns:
 - **`pkg/llm/`**: Contains the core, generic LLM interfaces and implementations that are provider-agnostic
 - **`pkg/adapters/`**: Contains specific LLM provider implementations (OpenAI, etc.)
 - **`examples/`**: Contains working examples showing how to use the framework
+
+## 🎯 Tool Usage Strategies
+
+The framework provides two simple strategies for controlling tool usage:
+
+1. **`AutoToolSelection()`**: Lets the LLM automatically choose when to use tools (default behavior)
+2. **`ForceTool(toolName)`**: Forces the LLM to use a specific tool
+
+For more complex scenarios (like disabling tools or restricting to a subset), simply control which tools are provided to the agent in the first place. This approach is simpler and more intuitive.
 
 ## 🔧 Usage Examples
 
@@ -108,6 +128,13 @@ func main() {
     history := []llm.Message{
         &llm.UserMessage{Content: "Hello! How are you?"},
     }
+
+    // Example: Force the use of a specific tool
+    request := llm.NewLLMRequest(
+        history,
+        llm.WithToolUsage(llm.ForceTool("calculator")),
+        llm.WithTools(calculator),
+    )
 
     // Make request
     request := llm.NewLLMRequest(history, llm.WithToolUsage(false))

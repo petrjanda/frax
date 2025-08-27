@@ -39,7 +39,11 @@ func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) IAgent {
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
 func (a *Agent) Loop(ctx context.Context, history []Message) ([]Message, error) {
-	req := NewLLMRequest(history, WithTools(a.tools...))
+	req := NewLLMRequest(history,
+		WithTools(a.tools...),
+		WithToolUsage(AutoToolSelection()),
+	)
+
 	response, err := a.llm.Invoke(ctx, req)
 	if err != nil {
 		return nil, err

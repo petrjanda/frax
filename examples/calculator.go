@@ -129,43 +129,41 @@ func main() {
 	calculator := &MathCalculator{}
 	fmt.Printf("🧮 Calculator tool loaded: %s\n", calculator.Description())
 
-	// Test various math operations through OpenAI
+	// Test various math operations through OpenAI with different tool usage strategies
 	testCases := []struct {
-		question string
-		expected string
+		question    string
+		expected    string
+		toolUsage   llm.ToolUsage
+		description string
 	}{
 		{
-			question: "What is 15 plus 27?",
-			expected: "add",
+			question:    "What is 15 plus 27?",
+			expected:    "add",
+			toolUsage:   llm.AutoToolSelection(),
+			description: "Auto tool selection (default)",
 		},
 		{
-			question: "Can you multiply 8 by 9?",
-			expected: "multiply",
-		},
-		{
-			question: "Calculate 100 divided by 5",
-			expected: "divide",
-		},
-		{
-			question: "What's 50 minus 23?",
-			expected: "subtract",
+			question:    "Can you multiply 8 by 9?",
+			expected:    "multiply",
+			toolUsage:   llm.ForceTool("calculator"),
+			description: "Force calculator tool",
 		},
 	}
 
 	ctx := context.Background()
 
 	for i, testCase := range testCases {
-		fmt.Printf("\n--- Test Case %d: %s ---\n", i+1, testCase.question)
+		fmt.Printf("\n--- Test Case %d: %s (%s) ---\n", i+1, testCase.question, testCase.description)
 
 		// Create conversation history
 		history := []llm.Message{
 			&llm.UserMessage{Content: testCase.question},
 		}
 
-		// Create request with tools enabled
+		// Create request with the specified tool usage strategy
 		request := llm.NewLLMRequest(
 			history,
-			llm.WithToolUsage(true),
+			llm.WithToolUsage(testCase.toolUsage),
 			llm.WithTools(calculator),
 		)
 
