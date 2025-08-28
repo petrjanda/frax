@@ -181,6 +181,7 @@ func main() {
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
 		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
+
 	)
 
 	// Create conversation history with the travel request
@@ -194,7 +195,13 @@ func main() {
 	fmt.Println("============================================================")
 
 	// Run the agent
-	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history))
+	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history, llm.WithSystem(`
+		You are a travel agent. You are given a task to book travel to a specific city.
+		You have two tools available to you: book_flight and book_hotel.
+		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values.
+		This is required for both flight and hotel bookings.
+		Always validate and format dates properly before making bookings.
+	`)))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)
 	}

@@ -11,6 +11,7 @@ type LLM interface {
 
 // LLMRequest represents a request to the LLM
 type LLMRequest struct {
+	System    string
 	History   []Message
 	Tools     []Tool
 	ToolUsage ToolUsage
@@ -30,6 +31,13 @@ func WithToolUsage(toolUsage ToolUsage) LLMRequestOpts {
 func WithTools(tools ...Tool) LLMRequestOpts {
 	return func(r *LLMRequest) {
 		r.Tools = append(r.Tools, tools...)
+	}
+}
+
+// WithSystem sets the system message for the request
+func WithSystem(system string) LLMRequestOpts {
+	return func(r *LLMRequest) {
+		r.System = system
 	}
 }
 

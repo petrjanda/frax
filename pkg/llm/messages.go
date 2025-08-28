@@ -66,6 +66,12 @@ type SystemMessage struct {
 	Content string
 }
 
+func NewSystemMessage(content string) *SystemMessage {
+	return &SystemMessage{
+		Content: content,
+	}
+}
+
 func (m *SystemMessage) Kind() MessageKind {
 	return MessageKindText
 }

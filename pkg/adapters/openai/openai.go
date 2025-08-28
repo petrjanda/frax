@@ -47,12 +47,12 @@ func NewOpenAIAdapter(apiKey string, opts ...OpenAIAdapterOpts) (*OpenAIAdapter,
 // Invoke implements the LLM interface by calling OpenAI's API
 func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
 	// Convert our messages to OpenAI format
-	messages := a.convertMessages(request.History)
+	history := append(llm.NewHistory(llm.NewSystemMessage(request.System)), request.History...)
 
 	// Prepare the chat completion request
 	chatReq := openai.ChatCompletionNewParams{
 		Model:    shared.ChatModel(a.model),
-		Messages: messages,
+		Messages: a.convertMessages(history),
 	}
 
 	// Handle tool usage based on the ToolUsage strategy
