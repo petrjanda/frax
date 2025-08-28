@@ -18,8 +18,8 @@ type Flight struct {
 	FlightNumber string    `json:"flight_number" jsonschema:"required"`
 	From         string    `json:"from" jsonschema:"required"`
 	To           string    `json:"to" jsonschema:"required"`
-	Departure    time.Time `json:"departure" jsonschema:"required"`
-	Arrival      time.Time `json:"arrival" jsonschema:"required"`
+	Departure    time.Time `json:"departure" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
+	Arrival      time.Time `json:"arrival" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
 	Airline      string    `json:"airline" jsonschema:"required"`
 	Price        float64   `json:"price" jsonschema:"required"`
 	Class        string    `json:"class" jsonschema:"required"`
@@ -29,8 +29,8 @@ type Flight struct {
 type Hotel struct {
 	HotelName     string    `json:"hotel_name" jsonschema:"required"`
 	City          string    `json:"city" jsonschema:"required"`
-	CheckIn       time.Time `json:"check_in" jsonschema:"required"`
-	CheckOut      time.Time `json:"check_out" jsonschema:"required"`
+	CheckIn       time.Time `json:"check_in" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
+	CheckOut      time.Time `json:"check_out" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
 	RoomType      string    `json:"room_type" jsonschema:"required"`
 	PricePerNight float64   `json:"price_per_night" jsonschema:"required"`
 	TotalPrice    float64   `json:"total_price" jsonschema:"required"`
@@ -145,7 +145,7 @@ func (h *HotelBookingTool) Run(ctx context.Context, args json.RawMessage) (json.
 type FlightBookingRequest struct {
 	From       string    `json:"from" jsonschema:"required"`
 	To         string    `json:"to" jsonschema:"required"`
-	Date       time.Time `json:"date" jsonschema:"required"`
+	Date       time.Time `json:"date" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
 	Class      string    `json:"class" jsonschema:"required"`
 	Passengers int       `json:"passengers" jsonschema:"required"`
 }
@@ -153,8 +153,8 @@ type FlightBookingRequest struct {
 // HotelBookingRequest represents the input for booking a hotel
 type HotelBookingRequest struct {
 	City     string    `json:"city" jsonschema:"required"`
-	CheckIn  time.Time `json:"check_in" jsonschema:"required"`
-	CheckOut time.Time `json:"check_out" jsonschema:"required"`
+	CheckIn  time.Time `json:"check_in" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
+	CheckOut time.Time `json:"check_out" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
 	RoomType string    `json:"room_type" jsonschema:"required"`
 	Guests   int       `json:"guests" jsonschema:"required"`
 }
