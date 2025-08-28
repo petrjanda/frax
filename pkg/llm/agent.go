@@ -74,9 +74,12 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 	toolCalls := response.ToolCalls()
 	if len(toolCalls) > 0 {
 		for _, toolCall := range toolCalls {
-			message, err := a.CallToolWithRetry(ctx, toolCall)
+			message, err := a.CallTool(ctx, toolCall)
 			if err != nil {
-				response.AddMessage(&UserMessage{Content: err.Error()})
+				response.AddMessage(&ToolResultMessage{
+					ToolCall: toolCall,
+					Result:   json.RawMessage(err.Error()),
+				})
 			} else {
 				response.AddMessage(message)
 			}
@@ -88,8 +91,8 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 	return response, nil
 }
 
-// CallToolWithRetry executes a tool call with retry logic using a formatter approach
-func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Message, error) {
+// CallTool executes a tool call with retry logic using a formatter approach
+func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, error) {
 	var lastErr error
 	delay := a.retryDelay
 	currentToolCall := toolCall // Create a local copy
@@ -118,9 +121,13 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 			}
 		}
 
-		message, err := a.CallTool(ctx, currentToolCall)
+		result, err := targetTool.Run(ctx, toolCall.Args)
+
 		if err == nil {
-			return message, nil
+			return &ToolResultMessage{
+				ToolCall: currentToolCall,
+				Result:   result,
+			}, nil
 		}
 
 		lastErr = err
@@ -130,22 +137,13 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 			break
 		}
 
-		// Create a comprehensive error message that includes:
-		// 1. What the tool call was trying to do
-		// 2. What parameters were used
-		// 3. What the specific error was
-		// 4. The tool's input schema for reference
-		// 5. Clear instructions on how to fix it
 		errorDescription := fmt.Sprintf(
 			"Tool call to '%s' failed with error: %s\n\n"+
 				"Failed parameters: %s\n\n"+
-				"Tool input schema: %s\n\n"+
-				"Please provide corrected parameters that match the tool's input schema above. "+
-				"Return only the corrected JSON parameters, no additional text.",
+				"Please provide corrected parameters that match the tool's input schema above.",
 			currentToolCall.Name,
 			err.Error(),
 			prettyJSON(currentToolCall.Args),
-			string(targetTool.InputSchemaRaw()),
 		)
 
 		errorMessage := NewUserMessage(errorDescription)
@@ -218,37 +216,6 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 	}
 
 	return nil, fmt.Errorf("tool call failed after %d retries: %w", a.maxRetries+1, lastErr)
-}
-
-// CallTool executes a tool call and returns the result message
-func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, error) {
-
-	slog.Info("Calling tool",
-		"id", toolCall.ID,
-		"tool", toolCall.Name,
-		"params", prettyJSON(toolCall.Args))
-
-	var tool Tool
-	for _, t := range a.tools {
-		if t.Name() == toolCall.Name {
-			tool = t
-			break
-		}
-	}
-
-	if tool == nil {
-		return nil, fmt.Errorf("tool not found: %s", toolCall.Name)
-	}
-
-	result, err := tool.Run(ctx, toolCall.Args)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ToolResultMessage{
-		ToolCall: toolCall,
-		Result:   result,
-	}, nil
 }
 
 func prettyJSON(data json.RawMessage) string {

@@ -86,7 +86,7 @@ func TestAgentRetryMechanism(t *testing.T) {
 		}
 
 		// Test the retry mechanism
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
+		result, err := agent.(*Agent).CallTool(ctx, response.ToolCalls()[0])
 
 		if err != nil {
 			t.Errorf("Expected tool to succeed after retry, got error: %v", err)
@@ -131,7 +131,7 @@ func TestAgentRetryMechanism(t *testing.T) {
 		}
 
 		// Test the retry mechanism
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
+		result, err := agent.(*Agent).CallTool(ctx, response.ToolCalls()[0])
 
 		if err == nil {
 			t.Error("Expected tool to fail after all retries")
@@ -204,7 +204,7 @@ func TestAgentRetryMechanism(t *testing.T) {
 		}
 
 		// Test the retry mechanism with cancelled context
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
+		result, err := agent.(*Agent).CallTool(ctx, response.ToolCalls()[0])
 
 		if err == nil {
 			t.Error("Expected context cancellation error")
