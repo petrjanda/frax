@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	openai "github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
@@ -49,13 +48,6 @@ func NewOpenAIAdapter(apiKey string, opts ...OpenAIAdapterOpts) (*OpenAIAdapter,
 func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
 	// Convert our messages to OpenAI format
 	messages := a.convertMessages(request.History)
-
-	log.Println("===")
-
-	for _, msg := range messages {
-		payload, _ := json.Marshal(msg)
-		log.Println("msg", string(payload))
-	}
 
 	// Prepare the chat completion request
 	chatReq := openai.ChatCompletionNewParams{
