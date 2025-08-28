@@ -112,11 +112,15 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 		case *llm.SystemMessage:
 			openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
 
-		case *llm.ToolErrorMessage:
-			openaiMessages = append(openaiMessages, openai.ToolMessage(m.Error, m.ToolCall.Name))
 		case *llm.ToolResultMessage:
 			// Convert tool result to tool message
 			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.Name))
+
+		case *llm.ToolErrorMessage:
+			// Don't send tool error messages directly to OpenAI
+			// Instead, we'll handle retries differently to avoid API violations
+			// This case should not occur in normal operation with the new retry mechanism
+			continue
 		}
 	}
 

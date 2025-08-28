@@ -45,7 +45,7 @@ func (f *FlightBookingTool) Name() string {
 }
 
 func (f *FlightBookingTool) Description() string {
-	return "Book a flight from one city to another. Provide departure and arrival cities, preferred dates, and travel class."
+	return "Book a flight from one city to another. Provide departure and arrival cities, preferred dates, and travel class. IMPORTANT: Dates must be in ISO 8601 format (YYYY-MM-DD) like '2024-11-01' for November 1st, 2024."
 }
 
 func (f *FlightBookingTool) InputSchemaRaw() json.RawMessage {
@@ -61,7 +61,11 @@ func (f *FlightBookingTool) OutputSchemaRaw() json.RawMessage {
 func (f *FlightBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var request FlightBookingRequest
 	if err := json.Unmarshal(args, &request); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal request: %w", err)
+		// Provide more helpful error messages for common parsing issues
+		if err.Error() == "parsing time \"1st Nov\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"1st Nov\" as \"2006\"" {
+			return nil, fmt.Errorf("date format error: Please use ISO 8601 format (YYYY-MM-DD) like '2024-11-01' instead of '1st Nov'. The date field expects a specific format that Go can parse.")
+		}
+		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format.", err)
 	}
 
 	// Mock flight booking - generate fake flight details
@@ -95,7 +99,7 @@ func (h *HotelBookingTool) Name() string {
 }
 
 func (h *HotelBookingTool) Description() string {
-	return "Book a hotel in a specific city. Provide city, check-in and check-out dates, and room type preferences."
+	return "Book a hotel in a specific city. Provide city, check-in and check-out dates, and room type preferences. IMPORTANT: Dates must be in ISO 8601 format (YYYY-MM-DD) like '2024-11-01' for November 1st, 2024."
 }
 
 func (h *HotelBookingTool) InputSchemaRaw() json.RawMessage {
@@ -111,7 +115,11 @@ func (h *HotelBookingTool) OutputSchemaRaw() json.RawMessage {
 func (h *HotelBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var request HotelBookingRequest
 	if err := json.Unmarshal(args, &request); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal request: %w", err)
+		// Provide more helpful error messages for common parsing issues
+		if err.Error() == "parsing time \"1st Nov\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"1st Nov\" as \"2006\"" {
+			return nil, fmt.Errorf("date format error: Please use ISO 8601 format (YYYY-MM-DD) like '2024-11-01' instead of '1st Nov'. The date field expects a specific format that Go can parse.")
+		}
+		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format.", err)
 	}
 
 	// Mock hotel booking - generate fake hotel details
@@ -185,7 +193,7 @@ func main() {
 
 	// Create conversation history with the travel request
 	history := llm.NewHistory(
-		llm.NewUserMessage("I need to book travel to Barcelona. I will be flying from Copenhagen. Please book me a flight and a hotel for a 4-night stay starting next week. I prefer economy class for the flight and a standard room for the hotel. I will travel 1st Nov out and 3rd Nov back."),
+		llm.NewUserMessage("I need to book travel to Barcelona. I will be flying from Copenhagen. Please book me a flight and a hotel for a 4-night stay starting next week. I prefer economy class for the flight and a standard room for the hotel. I will travel 1st Nov out and 3rd Nov back. Note: Please use ISO 8601 date format (YYYY-MM-DD) for all dates, for example '2024-11-01' for November 1st."),
 	)
 
 	fmt.Println("🚀 Starting Travel Agent...")

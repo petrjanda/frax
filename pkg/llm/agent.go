@@ -1,8 +1,11 @@
 package llm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -66,6 +69,11 @@ func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) LLM {
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
 func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
+	// Initialize agent history if this is the first call
+	if len(a.history) == 0 {
+		a.history = request.History
+	}
+
 	req := request.Clone(
 		WithTools(a.tools...),
 		WithToolUsage(AutoToolSelection()),
@@ -80,19 +88,31 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 		for _, toolCall := range response.ToolCalls {
 			message, err := a.CallToolWithRetry(ctx, toolCall)
 			if err != nil {
-				// If all retries failed, create an error message and continue
-				errorMessage := &ToolErrorMessage{
-					ToolCall: toolCall,
-					Error:    err.Error(),
-				}
+				// If all retries failed, create a comprehensive error message
+				// that explains what went wrong and includes the failed parameters
+				errorDescription := fmt.Sprintf(
+					"Tool '%s' failed after all retry attempts.\n\n"+
+						"Error: %s\n\n"+
+						"Failed parameters: %s\n\n"+
+						"Please review the error and provide corrected parameters.",
+					toolCall.Name,
+					err.Error(),
+					prettyJSON(toolCall.Args),
+				)
+				errorMessage := NewUserMessage(errorDescription)
 				response.AddMessage(errorMessage)
 			} else {
 				response.AddMessage(message)
 			}
 		}
 
-		// Continue the loop
-		return a.Invoke(ctx, NewLLMRequest(response.Messages))
+		// Update the agent's history with all messages from this interaction
+		a.history = append(a.history, response.Messages...)
+
+		// Continue the loop with the updated conversation history
+		// Include both the original request history and the new messages
+		updatedHistory := append(request.History, response.Messages...)
+		return a.Invoke(ctx, NewLLMRequest(updatedHistory))
 	}
 
 	return response, nil
@@ -127,15 +147,38 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 			break
 		}
 
-		// Create an error message to feed back to the LLM for correction
-		errorMessage := &ToolErrorMessage{
-			ToolCall: currentToolCall,
-			Error:    err.Error(),
-		}
+		// Create a comprehensive error message that includes:
+		// 1. What the tool call was trying to do
+		// 2. What parameters were used
+		// 3. What the specific error was
+		// 4. Clear instructions on how to fix it
+		errorDescription := fmt.Sprintf(
+			"Tool call to '%s' failed with error: %s\n\n"+
+				"Failed parameters: %s\n\n"+
+				"Please correct the parameters and provide a new tool call. "+
+				"Make sure to fix the specific issue mentioned in the error.",
+			currentToolCall.Name,
+			err.Error(),
+			prettyJSON(currentToolCall.Args),
+		)
 
-		// Add the error message to the conversation and ask LLM to retry
-		// This allows the LLM to understand what went wrong and correct the input
-		retryRequest := NewLLMRequest(NewHistory(errorMessage))
+		errorMessage := NewUserMessage(errorDescription)
+
+		// Log the retry attempt for debugging
+		slog.Info("Tool call failed, asking LLM to correct parameters",
+			"tool", currentToolCall.Name,
+			"attempt", attempt+1,
+			"max_attempts", a.maxRetries,
+			"error", err.Error(),
+		)
+
+		// Create a retry request that includes:
+		// 1. The original conversation history (so the LLM knows the task)
+		// 2. The error message with context
+		// 3. The tools available
+		// This gives the LLM full context to understand what went wrong and how to fix it
+		retryHistory := append(a.history, errorMessage)
+		retryRequest := NewLLMRequest(retryHistory)
 		retryRequest = retryRequest.Clone(
 			WithTools(a.tools...),
 			WithToolUsage(AutoToolSelection()),
@@ -145,6 +188,11 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 		retryResponse, retryErr := a.llm.Invoke(ctx, retryRequest)
 		if retryErr != nil {
 			// If we can't get a retry, continue to the next retry attempt
+			slog.Warn("Failed to get corrected tool call from LLM, continuing to next retry attempt",
+				"tool", currentToolCall.Name,
+				"attempt", attempt+1,
+				"error", retryErr.Error(),
+			)
 			continue
 		}
 
@@ -157,7 +205,16 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 					Name: correctedToolCall.Name,
 					Args: correctedToolCall.Args,
 				}
+				slog.Info("LLM provided corrected tool call parameters",
+					"tool", correctedToolCall.Name,
+					"corrected_params", prettyJSON(correctedToolCall.Args),
+				)
 			}
+		} else {
+			slog.Warn("LLM did not provide a corrected tool call, continuing to next retry attempt",
+				"tool", currentToolCall.Name,
+				"attempt", attempt+1,
+			)
 		}
 	}
 
@@ -166,6 +223,11 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 
 // CallTool executes a tool call and returns the result message
 func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, error) {
+
+	slog.Info("Calling tool",
+		"tool", toolCall.Name,
+		"params", prettyJSON(toolCall.Args))
+
 	var tool Tool
 	for _, t := range a.tools {
 		if t.Name() == toolCall.Name {
@@ -187,4 +249,13 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 		ToolCall: toolCall,
 		Result:   result,
 	}, nil
+}
+
+func prettyJSON(data json.RawMessage) string {
+	var prettyJSON bytes.Buffer
+	err := json.Indent(&prettyJSON, data, "", "  ")
+	if err != nil {
+		return string(data)
+	}
+	return prettyJSON.String()
 }
