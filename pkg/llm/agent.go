@@ -13,7 +13,6 @@ import (
 type Agent struct {
 	llm          LLM
 	tools        []Tool
-	history      []Message
 	maxRetries   int
 	retryDelay   time.Duration
 	retryBackoff float64
@@ -21,13 +20,6 @@ type Agent struct {
 
 // AgentOpts represents options for configuring an agent
 type AgentOpts = func(*Agent)
-
-// WithInitialHistory sets the initial conversation history for the agent
-func WithInitialHistory(history []Message) AgentOpts {
-	return func(a *Agent) {
-		a.history = history
-	}
-}
 
 // WithMaxRetries sets the maximum number of retries for tool calls
 func WithMaxRetries(maxRetries int) AgentOpts {
@@ -69,11 +61,6 @@ func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) LLM {
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
 func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
-	// Initialize agent history if this is the first call
-	if len(a.history) == 0 {
-		a.history = request.History
-	}
-
 	req := request.Clone(
 		WithTools(a.tools...),
 		WithToolUsage(AutoToolSelection()),
@@ -85,34 +72,40 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 	}
 
 	if response.CalledTool() {
+		// Process all tool calls first to collect results
+		var toolResults []Message
+		var failedToolCalls []*ToolCall
+
 		for _, toolCall := range response.ToolCalls {
 			message, err := a.CallToolWithRetry(ctx, toolCall)
 			if err != nil {
-				// If all retries failed, create a comprehensive error message
-				// that explains what went wrong and includes the failed parameters
-				errorDescription := fmt.Sprintf(
-					"Tool '%s' failed after all retry attempts.\n\n"+
-						"Error: %s\n\n"+
-						"Failed parameters: %s\n\n"+
-						"Please review the error and provide corrected parameters.",
-					toolCall.Name,
-					err.Error(),
-					prettyJSON(toolCall.Args),
-				)
-				errorMessage := NewUserMessage(errorDescription)
-				response.AddMessage(errorMessage)
+				// Collect failed tool calls for later handling
+				failedToolCalls = append(failedToolCalls, toolCall)
 			} else {
-				response.AddMessage(message)
+				toolResults = append(toolResults, message)
 			}
 		}
 
-		// Update the agent's history with all messages from this interaction
-		a.history = append(a.history, response.Messages...)
+		// If we have successful tool results, add them to the response
+		if len(toolResults) > 0 {
+			for _, result := range toolResults {
+				response.AddMessage(result)
+			}
+		}
 
-		// Continue the loop with the updated conversation history
-		// Include both the original request history and the new messages
-		updatedHistory := append(request.History, response.Messages...)
-		return a.Invoke(ctx, NewLLMRequest(updatedHistory))
+		// If we have failed tool calls, we need to handle them
+		if len(failedToolCalls) > 0 {
+			// Create a comprehensive error message for the failed tools
+			errorDescription := "Some tools failed to execute. Please review the errors and provide corrected parameters."
+			errorMessage := NewUserMessage(errorDescription)
+			response.AddMessage(errorMessage)
+
+			// Return the response with errors instead of continuing the loop
+			// This prevents the message sequence violation
+			return response, nil
+		}
+
+		return a.Invoke(ctx, NewLLMRequest(append(request.History, response.Messages...)))
 	}
 
 	return response, nil
@@ -177,8 +170,7 @@ func (a *Agent) CallToolWithRetry(ctx context.Context, toolCall *ToolCall) (Mess
 		// 2. The error message with context
 		// 3. The tools available
 		// This gives the LLM full context to understand what went wrong and how to fix it
-		retryHistory := append(a.history, errorMessage)
-		retryRequest := NewLLMRequest(retryHistory)
+		retryRequest := NewLLMRequest(NewHistory(errorMessage))
 		retryRequest = retryRequest.Clone(
 			WithTools(a.tools...),
 			WithToolUsage(AutoToolSelection()),

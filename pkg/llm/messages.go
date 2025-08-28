@@ -26,6 +26,7 @@ const (
 	MessageRoleUser      MessageRole = "user"
 	MessageRoleAssistant MessageRole = "assistant"
 	MessageRoleSystem    MessageRole = "system"
+	MessageRoleTool      MessageRole = "tool"
 )
 
 // UserMessage represents a message from the user
@@ -84,7 +85,7 @@ func (m *ToolMessage) Kind() MessageKind {
 }
 
 func (m *ToolMessage) Role() MessageRole {
-	return MessageRoleAssistant
+	return MessageRoleTool
 }
 
 // ToolResultMessage represents the result of a tool execution
@@ -98,7 +99,7 @@ func (m *ToolResultMessage) Kind() MessageKind {
 }
 
 func (m *ToolResultMessage) Role() MessageRole {
-	return MessageRoleAssistant
+	return MessageRoleTool
 }
 
 // ToolCall represents a call to a tool
