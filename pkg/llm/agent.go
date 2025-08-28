@@ -13,8 +13,9 @@ import (
 
 // Agent represents an agent that can use tools and interact with an LLM
 type Agent struct {
-	llm          LLM
-	tools        []Tool
+	llm   LLM
+	tools []Tool
+
 	maxRetries   int
 	retryDelay   time.Duration
 	retryBackoff float64
