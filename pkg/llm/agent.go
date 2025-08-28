@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	_ "embed"
 )
 
 // Agent represents an agent that can use tools and interact with an LLM
@@ -90,22 +92,30 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 
 // CallTool executes a tool call with retry logic using a formatter approach
 func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, error) {
+	// Find the tool to get its input schema
+	targetTool, err := a.findTool(toolCall.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.executeToolWithRetry(ctx, toolCall, targetTool)
+}
+
+// findTool finds a tool by name from the agent's tool list
+func (a *Agent) findTool(name string) (Tool, error) {
+	for _, t := range a.tools {
+		if t.Name() == name {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("tool not found: %s", name)
+}
+
+// executeToolWithRetry manages the retry loop for tool execution
+func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, targetTool Tool) (Message, error) {
 	var lastErr error
 	delay := a.retryDelay
 	currentToolCall := toolCall // Create a local copy
-
-	// Find the tool to get its input schema
-	var targetTool Tool
-	for _, t := range a.tools {
-		if t.Name() == currentToolCall.Name {
-			targetTool = t
-			break
-		}
-	}
-
-	if targetTool == nil {
-		return nil, fmt.Errorf("tool not found: %s", currentToolCall.Name)
-	}
 
 	for attempt := 0; attempt <= a.maxRetries; attempt++ {
 		if attempt > 0 {
@@ -118,13 +128,10 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 			}
 		}
 
-		result, err := targetTool.Run(ctx, currentToolCall.Args)
-
+		// Try to execute the tool
+		result, err := a.executeToolAttempt(ctx, currentToolCall, targetTool)
 		if err == nil {
-			return &ToolResultMessage{
-				ToolCall: currentToolCall,
-				Result:   result,
-			}, nil
+			return result, nil
 		}
 
 		lastErr = err
@@ -134,72 +141,102 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 			break
 		}
 
-		// Log the retry attempt for debugging
-		slog.Info("Tool call failed, asking LLM to correct parameters",
-			"tool", currentToolCall.Name,
-			"attempt", attempt+1,
-			"max_attempts", a.maxRetries,
-			"error", err.Error(),
-		)
-
-		errorMessage := NewUserMessage(fmt.Sprintf(
-			"Tool call to '%s' failed with error: %s\n\n"+
-				"Failed parameters: %s\n\n"+
-				"Please provide corrected parameters that match the tool's input schema above.",
-			currentToolCall.Name,
-			err.Error(),
-			prettyJSON(currentToolCall.Args),
-		))
-
-		retryRequest := NewLLMRequest(NewHistory(errorMessage))
-		formatter := NewBaseLLMWithStructuredOutput(targetTool.InputSchemaRaw(), a.llm)
-
-		// Get corrected parameters from the LLM
-		retryResponse, retryErr := formatter.Invoke(ctx, retryRequest)
-		if retryErr != nil {
-			// If we can't get a retry, continue to the next retry attempt
-			slog.Warn("Failed to get corrected parameters from LLM, continuing to next retry attempt",
-				"tool", currentToolCall.Name,
-				"attempt", attempt+1,
-				"error", retryErr.Error(),
-			)
-			continue
+		// Handle tool failure and get corrected parameters
+		correctedToolCall, shouldContinue := a.handleToolFailure(ctx, currentToolCall, targetTool, attempt, err)
+		if !shouldContinue {
+			break
 		}
 
-		// Extract the corrected parameters from the LLM response
-		if len(retryResponse.Messages) > 0 {
-			// Get the first message content as corrected parameters
-			if userMessage, ok := retryResponse.Messages[0].(*UserMessage); ok {
-				correctedArgs := []byte(userMessage.Content)
-
-				slog.Info("Retry response", "response", string(correctedArgs))
-
-				// Create a new tool call with corrected parameters
-				currentToolCall = &ToolCall{
-					ID:   currentToolCall.ID,
-					Name: currentToolCall.Name,
-					Args: correctedArgs,
-				}
-
-				slog.Info("LLM provided corrected tool call parameters",
-					"tool", currentToolCall.Name,
-					"corrected_params", prettyJSON(correctedArgs),
-				)
-			} else {
-				slog.Warn("LLM did not provide corrected parameters, continuing to next retry attempt",
-					"tool", currentToolCall.Name,
-					"attempt", attempt+1,
-				)
-			}
-		} else {
-			slog.Warn("LLM did not provide corrected parameters, continuing to next retry attempt",
-				"tool", currentToolCall.Name,
-				"attempt", attempt+1,
-			)
-		}
+		currentToolCall = correctedToolCall
 	}
 
 	return nil, fmt.Errorf("tool call failed after %d retries: %w", a.maxRetries+1, lastErr)
+}
+
+// executeToolAttempt executes a single tool attempt
+func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targetTool Tool) (Message, error) {
+	result, err := targetTool.Run(ctx, toolCall.Args)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ToolResultMessage{
+		ToolCall: toolCall,
+		Result:   result,
+	}, nil
+}
+
+// handleToolFailure handles tool failure and attempts to get corrected parameters
+func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targetTool Tool, attempt int, err error) (*ToolCall, bool) {
+	// Log the retry attempt for debugging
+	slog.Info("Tool call failed, asking LLM to correct parameters",
+		"tool", toolCall.Name,
+		"attempt", attempt+1,
+		"max_attempts", a.maxRetries,
+		"error", err.Error(),
+	)
+
+	// Get corrected parameters from the LLM
+	correctedArgs, err := a.correctToolCall(ctx, toolCall, targetTool, err)
+	if err != nil {
+		slog.Warn("Failed to get corrected parameters from LLM, continuing to next retry attempt",
+			"tool", toolCall.Name,
+			"attempt", attempt+1,
+			"error", err.Error(),
+		)
+		return toolCall, true // Continue with current parameters
+	}
+
+	// Update the tool call with corrected parameters
+	updatedToolCall := a.updateToolCallArgs(toolCall, correctedArgs)
+
+	slog.Info("LLM provided corrected tool call parameters",
+		"tool", updatedToolCall.Name,
+		"corrected_params", prettyJSON(correctedArgs),
+	)
+
+	return updatedToolCall, true
+}
+
+//go:embed prompts/tool_call_correction.txt
+var correctionPromptFormat string
+
+// correctToolCall uses the LLM to get corrected parameters for a failed tool call
+func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetTool Tool, originalErr error) (json.RawMessage, error) {
+	errorMessage := NewUserMessage(fmt.Sprintf(
+		correctionPromptFormat,
+		toolCall.Name,
+		originalErr.Error(),
+		prettyJSON(toolCall.Args),
+	))
+
+	retryRequest := NewLLMRequest(NewHistory(errorMessage))
+	formatter := NewBaseLLMWithStructuredOutput(targetTool.InputSchemaRaw(), a.llm)
+
+	// Get corrected parameters from the LLM
+	retryResponse, retryErr := formatter.Invoke(ctx, retryRequest)
+	if retryErr != nil {
+		return nil, fmt.Errorf("failed to get corrected parameters: %w", retryErr)
+	}
+
+	// Extract the corrected parameters from the LLM response
+	if len(retryResponse.Messages) > 0 {
+		if userMessage, ok := retryResponse.Messages[0].(*UserMessage); ok {
+			slog.Info("Retry response", "response", userMessage.Content)
+			return []byte(userMessage.Content), nil
+		}
+	}
+
+	return nil, fmt.Errorf("LLM did not provide corrected parameters")
+}
+
+// HELPERS
+func (a *Agent) updateToolCallArgs(originalToolCall *ToolCall, newArgs json.RawMessage) *ToolCall {
+	return &ToolCall{
+		ID:   originalToolCall.ID,
+		Name: originalToolCall.Name,
+		Args: newArgs,
+	}
 }
 
 func prettyJSON(data json.RawMessage) string {

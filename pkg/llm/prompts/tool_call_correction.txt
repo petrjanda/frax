@@ -1,0 +1,3 @@
+Tool call to '%s' failed with error: %s
+Failed parameters: %s
+Please provide corrected parameters that match the tool's input schema above.
