@@ -76,10 +76,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 		for _, toolCall := range toolCalls {
 			message, err := a.CallTool(ctx, toolCall)
 			if err != nil {
-				response.AddMessage(&ToolResultMessage{
-					ToolCall: toolCall,
-					Result:   json.RawMessage(err.Error()),
-				})
+				response.AddMessage(NewToolResultErrorMessage(toolCall, err.Error()))
 			} else {
 				response.AddMessage(message)
 			}
@@ -121,7 +118,7 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 			}
 		}
 
-		result, err := targetTool.Run(ctx, toolCall.Args)
+		result, err := targetTool.Run(ctx, currentToolCall.Args)
 
 		if err == nil {
 			return &ToolResultMessage{
@@ -137,17 +134,6 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 			break
 		}
 
-		errorDescription := fmt.Sprintf(
-			"Tool call to '%s' failed with error: %s\n\n"+
-				"Failed parameters: %s\n\n"+
-				"Please provide corrected parameters that match the tool's input schema above.",
-			currentToolCall.Name,
-			err.Error(),
-			prettyJSON(currentToolCall.Args),
-		)
-
-		errorMessage := NewUserMessage(errorDescription)
-
 		// Log the retry attempt for debugging
 		slog.Info("Tool call failed, asking LLM to correct parameters",
 			"tool", currentToolCall.Name,
@@ -156,12 +142,20 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 			"error", err.Error(),
 		)
 
-		// Create a retry request that asks the LLM to provide corrected parameters
-		// We don't include any tools, just ask for a text response with corrected JSON
+		errorMessage := NewUserMessage(fmt.Sprintf(
+			"Tool call to '%s' failed with error: %s\n\n"+
+				"Failed parameters: %s\n\n"+
+				"Please provide corrected parameters that match the tool's input schema above.",
+			currentToolCall.Name,
+			err.Error(),
+			prettyJSON(currentToolCall.Args),
+		))
+
 		retryRequest := NewLLMRequest(NewHistory(errorMessage))
+		formatter := NewBaseLLMWithStructuredOutput(targetTool.InputSchemaRaw(), a.llm)
 
 		// Get corrected parameters from the LLM
-		retryResponse, retryErr := a.llm.Invoke(ctx, retryRequest)
+		retryResponse, retryErr := formatter.Invoke(ctx, retryRequest)
 		if retryErr != nil {
 			// If we can't get a retry, continue to the next retry attempt
 			slog.Warn("Failed to get corrected parameters from LLM, continuing to next retry attempt",
@@ -174,39 +168,29 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 
 		// Extract the corrected parameters from the LLM response
 		if len(retryResponse.Messages) > 0 {
-			// The LLM should return the corrected parameters as text
-			correctedParams := retryResponse.Messages[0].(*AssistantMessage).Content
+			// Get the first message content as corrected parameters
+			if userMessage, ok := retryResponse.Messages[0].(*UserMessage); ok {
+				correctedArgs := []byte(userMessage.Content)
 
-			// Try to parse the corrected parameters as JSON
-			var correctedArgs json.RawMessage
-			if err := json.Unmarshal([]byte(correctedParams), &correctedArgs); err != nil {
-				// If parsing fails, try to extract JSON from the text
-				// Look for JSON-like content between curly braces
-				start := bytes.Index([]byte(correctedParams), []byte("{"))
-				end := bytes.LastIndex([]byte(correctedParams), []byte("}"))
-				if start >= 0 && end > start {
-					jsonContent := correctedParams[start : end+1]
-					if json.Unmarshal([]byte(jsonContent), &correctedArgs) == nil {
-						correctedParams = jsonContent
-					} else {
-						correctedArgs = json.RawMessage(correctedParams)
-					}
-				} else {
-					correctedArgs = json.RawMessage(correctedParams)
+				slog.Info("Retry response", "response", string(correctedArgs))
+
+				// Create a new tool call with corrected parameters
+				currentToolCall = &ToolCall{
+					ID:   currentToolCall.ID,
+					Name: currentToolCall.Name,
+					Args: correctedArgs,
 				}
-			}
 
-			// Create a new tool call with corrected parameters
-			currentToolCall = &ToolCall{
-				ID:   currentToolCall.ID,
-				Name: currentToolCall.Name,
-				Args: correctedArgs,
+				slog.Info("LLM provided corrected tool call parameters",
+					"tool", currentToolCall.Name,
+					"corrected_params", prettyJSON(correctedArgs),
+				)
+			} else {
+				slog.Warn("LLM did not provide corrected parameters, continuing to next retry attempt",
+					"tool", currentToolCall.Name,
+					"attempt", attempt+1,
+				)
 			}
-
-			slog.Info("LLM provided corrected tool call parameters",
-				"tool", currentToolCall.Name,
-				"corrected_params", prettyJSON(correctedArgs),
-			)
 		} else {
 			slog.Warn("LLM did not provide corrected parameters, continuing to next retry attempt",
 				"tool", currentToolCall.Name,

@@ -98,6 +98,20 @@ type ToolResultMessage struct {
 	Result   json.RawMessage
 }
 
+func NewToolResultMessage(toolCall *ToolCall, result json.RawMessage) *ToolResultMessage {
+	return &ToolResultMessage{
+		ToolCall: toolCall,
+		Result:   result,
+	}
+}
+
+func NewToolResultErrorMessage(toolCall *ToolCall, error string) *ToolResultMessage {
+	return &ToolResultMessage{
+		ToolCall: toolCall,
+		Result:   json.RawMessage(error),
+	}
+}
+
 func (m *ToolResultMessage) Kind() MessageKind {
 	return MessageKindToolResult
 }
