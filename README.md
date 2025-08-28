@@ -39,6 +39,12 @@ agent := llm.NewAgent(llm, tools, llm.WithInitialHistory(history))
 messages, err := agent.Loop(ctx, conversationHistory)
 ```
 
+**Retry Mechanism**: The agent automatically retries failed tool calls with LLM correction:
+- Configurable retry count and timing
+- Feeds tool errors back to LLM for parameter correction
+- Exponential backoff between retries
+- Minimal token consumption for retries
+
 ### 2. **LLM** (`llm/llm.go`)
 The `LLM` interface defines how to interact with language models. It handles requests, responses, and tool integration.
 
@@ -241,6 +247,7 @@ response, err := agent.Invoke(ctx, request)
 - **Type Safety**: Strong typing with Go's type system
 - **OpenAI Ready**: Full OpenAI API integration out of the box
 - **Extensible**: Easy to add new message types, tools, and LLM providers
+- **Retry Mechanism**: Automatic retry of failed tool calls with LLM correction
 
 ## 🔌 Extending the Framework
 

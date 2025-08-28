@@ -77,6 +77,10 @@ The agent will:
 - Uses the OpenAI LLM to understand the request
 - Automatically selects and calls the appropriate tools
 - Manages the conversation flow
+- **Retry Mechanism**: Automatically retries failed tool calls with LLM correction
+  - Configurable retry count (default: 3)
+  - Exponential backoff between retries
+  - Feeds tool errors back to LLM for parameter correction
 
 ## 🎨 Customization
 
@@ -101,4 +105,36 @@ This example demonstrates:
 - **Mock Data**: This example uses fake data for demonstration purposes
 - **API Key Required**: You need a valid OpenAI API key to run this example
 - **Tool Schemas**: All tools use automatically generated JSON schemas for OpenAI compatibility
-- **Error Handling**: The example includes basic error handling for robustness 
+- **Error Handling**: The example includes basic error handling for robustness
+- **Retry Mechanism**: The agent automatically retries failed tool calls, making it robust against parameter errors
+
+## 🔄 Retry Mechanism
+
+The travel agent includes a sophisticated retry mechanism that:
+
+1. **Detects Tool Failures**: When a tool fails (e.g., invalid date format), the error is captured
+2. **LLM Correction**: The error is fed back to the LLM, which can correct the parameters
+3. **Automatic Retry**: The corrected tool call is automatically retried
+4. **Configurable Limits**: You can control the number of retries and timing
+
+### Example Retry Scenario
+
+```
+User: "Book travel for 1st Nov out and 3rd Nov back"
+Agent: Calls book_flight with invalid date format
+Tool: Fails with "parsing time error"
+Agent: Feeds error to LLM
+LLM: Corrects date format to "2024-11-01" and "2024-11-03"
+Agent: Retries with corrected parameters
+Tool: Succeeds
+```
+
+### Configuration Options
+
+```go
+agent := llm.NewAgent(openaiLLM, tools,
+    llm.WithMaxRetries(3),                    // Allow up to 3 retries
+    llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
+    llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
+)
+``` 

@@ -176,8 +176,12 @@ func main() {
 		&HotelBookingTool{},
 	}
 
-	// Create agent with tools
-	agent := llm.NewAgent(openaiLLM, tools)
+	// Create agent with tools and retry configuration
+	agent := llm.NewAgent(openaiLLM, tools,
+		llm.WithMaxRetries(3),                    // Allow up to 3 retries
+		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
+		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
+	)
 
 	// Create conversation history with the travel request
 	history := llm.NewHistory(

@@ -111,6 +111,9 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 			openaiMessages = append(openaiMessages, openai.AssistantMessage(m.Content))
 		case *llm.SystemMessage:
 			openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
+
+		case *llm.ToolErrorMessage:
+			openaiMessages = append(openaiMessages, openai.ToolMessage(m.Error, m.ToolCall.Name))
 		case *llm.ToolResultMessage:
 			// Convert tool result to tool message
 			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.Name))

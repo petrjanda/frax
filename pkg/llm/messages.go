@@ -106,3 +106,24 @@ type ToolCall struct {
 	Name string
 	Args json.RawMessage
 }
+
+// ToolErrorMessage represents an error that occurred during tool execution
+type ToolErrorMessage struct {
+	ToolCall *ToolCall
+	Error    string
+}
+
+func NewToolErrorMessage(toolCall *ToolCall, error string) *ToolErrorMessage {
+	return &ToolErrorMessage{
+		ToolCall: toolCall,
+		Error:    error,
+	}
+}
+
+func (m *ToolErrorMessage) Kind() MessageKind {
+	return MessageKindToolResult
+}
+
+func (m *ToolErrorMessage) Role() MessageRole {
+	return MessageRoleAssistant
+}
