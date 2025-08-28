@@ -61,11 +61,7 @@ func (f *FlightBookingTool) OutputSchemaRaw() json.RawMessage {
 func (f *FlightBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var request FlightBookingRequest
 	if err := json.Unmarshal(args, &request); err != nil {
-		// Provide more helpful error messages for common parsing issues
-		if err.Error() == "parsing time \"1st Nov\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"1st Nov\" as \"2006\"" {
-			return nil, fmt.Errorf("date format error: Please use ISO 8601 format (YYYY-MM-DD) like '2024-11-01' instead of '1st Nov'. The date field expects a specific format that Go can parse.")
-		}
-		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format.", err)
+		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format", err)
 	}
 
 	// Mock flight booking - generate fake flight details
@@ -178,14 +174,14 @@ func main() {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
-	// Create travel booking tools
-	tools := []llm.Tool{
+	// Create travel booking toolbox
+	toolbox := llm.NewToolbox(
 		&FlightBookingTool{},
 		&HotelBookingTool{},
-	}
+	)
 
 	// Create agent with tools and retry configuration
-	agent := llm.NewAgent(openaiLLM, tools,
+	agent := llm.NewAgent(openaiLLM, toolbox,
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
 		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
@@ -201,11 +197,8 @@ func main() {
 	fmt.Println("🛫 Tools available: book_flight, book_hotel")
 	fmt.Println("============================================================")
 
-	// Create a request with the travel task
-	request := llm.NewLLMRequest(history)
-
 	// Run the agent
-	response, err := agent.Invoke(ctx, request)
+	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)
 	}
