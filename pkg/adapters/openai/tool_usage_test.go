@@ -1,10 +1,29 @@
 package openai
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/petrjanda/frax/pkg/llm"
 )
+
+// mockTool is a simple mock implementation for testing
+type mockTool struct {
+	name string
+}
+
+func (m *mockTool) Name() string        { return m.name }
+func (m *mockTool) Description() string { return "Mock tool for testing" }
+func (m *mockTool) InputSchemaRaw() json.RawMessage {
+	return json.RawMessage(`{"type": "object"}`)
+}
+func (m *mockTool) OutputSchemaRaw() json.RawMessage {
+	return json.RawMessage(`{"type": "object"}`)
+}
+func (m *mockTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+	return json.RawMessage(`{"result": "mock"}`), nil
+}
 
 func TestConvertToolUsage(t *testing.T) {
 	tests := []struct {
@@ -22,7 +41,7 @@ func TestConvertToolUsage(t *testing.T) {
 		{
 			name:      "Forced tool should return tool choice",
 			toolUsage: llm.ForceTool("calculator"),
-			tools:     []llm.Tool{},
+			tools:     []llm.Tool{&mockTool{name: "calculator"}},
 			expectNil: false,
 		},
 	}

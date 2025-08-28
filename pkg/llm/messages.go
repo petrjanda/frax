@@ -33,6 +33,12 @@ type UserMessage struct {
 	Content string
 }
 
+func NewUserMessage(content string) *UserMessage {
+	return &UserMessage{
+		Content: content,
+	}
+}
+
 func (m *UserMessage) Kind() MessageKind {
 	return MessageKindText
 }

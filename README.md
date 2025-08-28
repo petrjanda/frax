@@ -17,9 +17,14 @@ frax/
 │   │   └── types.go       # Generic Task and Eval interfaces
 │   └── adapters/          # LLM provider adapters
 │       └── openai/        # OpenAI API adapter
-│           └── openai.go  # OpenAI-specific implementation
+│           ├── openai.go  # OpenAI-specific implementation
+│           └── schemas/   # OpenAI-compatible schema generation
+│               ├── openai.go      # Schema generator
+│               └── README.md      # Schema package documentation
 ├── examples/               # Example implementations
-│   └── calculator.go      # Calculator tool example
+│   ├── calculator/        # Calculator tool example
+│   ├── structured_output/ # Structured output with schema generation
+│   └── travel_agent/      # Travel agent with flight and hotel booking tools
 ├── go.mod                  # Go module file
 └── go.sum                  # Go module checksums
 ```
@@ -79,6 +84,16 @@ A complete implementation of the LLM interface using OpenAI's API:
 ```go
 openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel("gpt-4o"))
 response, err := openaiLLM.Invoke(ctx, request)
+```
+
+### 7. **OpenAI Schemas** (`pkg/adapters/openai/schemas/`)
+Generates OpenAI-compatible JSON schemas from Go structs using the [invopop/jsonschema](https://github.com/invopop/jsonschema) library:
+
+```go
+import "github.com/petrjanda/frax/pkg/adapters/openai/schemas"
+
+generator := schemas.NewOpenAISchemaGenerator()
+schema, err := generator.GenerateSchema(Person{})
 ```
 
 ## 📦 Installation
@@ -177,6 +192,45 @@ agent := llm.NewAgent(openaiLLM, tools)
 
 // Run conversation loop
 messages, err := agent.Loop(ctx, conversationHistory)
+```
+
+### Structured Output with Schema Generation
+
+The framework supports structured output generation with automatic schema creation:
+
+```go
+import "github.com/petrjanda/frax/pkg/adapters/openai/schemas"
+
+// Define your struct with jsonschema tags
+type Person struct {
+    Name string `json:"name" jsonschema:"required"`
+    Age  int    `json:"age" jsonschema:"required"`
+}
+
+// Generate OpenAI-compatible schema
+generator := schemas.NewOpenAISchemaGenerator()
+schema, err := generator.GenerateSchema(Person{})
+
+// Use with structured output LLM
+personLLM := llm.NewBaseLLMWithStructuredOutput(schema, openaiLLM)
+```
+
+### Travel Agent with Multiple Tools
+
+The framework demonstrates complex multi-tool workflows with the travel agent example:
+
+```go
+// Create travel booking tools
+tools := []llm.Tool{
+    &FlightBookingTool{},
+    &HotelBookingTool{},
+}
+
+// Create agent with tools
+agent := llm.NewAgent(openaiLLM, tools)
+
+// The agent automatically orchestrates the booking process
+response, err := agent.Invoke(ctx, request)
 ```
 
 ## 🌟 Features

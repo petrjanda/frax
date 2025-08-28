@@ -5,11 +5,6 @@ import (
 	"fmt"
 )
 
-// IAgent represents an agent that can process conversations
-type IAgent interface {
-	Loop(ctx context.Context, history []Message) ([]Message, error)
-}
-
 // Agent represents an agent that can use tools and interact with an LLM
 type Agent struct {
 	llm     LLM
@@ -28,7 +23,7 @@ func WithInitialHistory(history []Message) AgentOpts {
 }
 
 // NewAgent creates a new agent with the given LLM and tools
-func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) IAgent {
+func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) LLM {
 	a := &Agent{llm: llm, tools: tools}
 	for _, opt := range opts {
 		opt(a)
@@ -38,8 +33,8 @@ func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) IAgent {
 }
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
-func (a *Agent) Loop(ctx context.Context, history []Message) ([]Message, error) {
-	req := NewLLMRequest(history,
+func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
+	req := request.Clone(
 		WithTools(a.tools...),
 		WithToolUsage(AutoToolSelection()),
 	)
@@ -60,10 +55,10 @@ func (a *Agent) Loop(ctx context.Context, history []Message) ([]Message, error) 
 		}
 
 		// Continue the loop
-		return a.Loop(ctx, response.Messages)
+		return a.Invoke(ctx, NewLLMRequest(response.Messages))
 	}
 
-	return response.Messages, nil
+	return response, nil
 }
 
 // CallTool executes a tool call and returns the result message

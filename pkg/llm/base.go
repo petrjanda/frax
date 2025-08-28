@@ -34,7 +34,7 @@ func WithTools(tools ...Tool) LLMRequestOpts {
 }
 
 // NewLLMRequest creates a new LLM request with the given options
-func NewLLMRequest(history []Message, opts ...LLMRequestOpts) *LLMRequest {
+func NewLLMRequest(history History, opts ...LLMRequestOpts) *LLMRequest {
 	r := &LLMRequest{
 		History:   history,
 		ToolUsage: AutoToolSelection(), // Default to auto tool selection
@@ -44,6 +44,26 @@ func NewLLMRequest(history []Message, opts ...LLMRequestOpts) *LLMRequest {
 	}
 
 	return r
+}
+
+func (r *LLMRequest) Clone(opts ...LLMRequestOpts) *LLMRequest {
+	req := &LLMRequest{
+		History:   r.History,
+		ToolUsage: r.ToolUsage,
+		Tools:     r.Tools,
+	}
+
+	for _, opt := range opts {
+		opt(req)
+	}
+
+	return req
+}
+
+type History = []Message
+
+func NewHistory(messages ...Message) History {
+	return messages
 }
 
 // LLMResponse represents a response from the LLM
