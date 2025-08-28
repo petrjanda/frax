@@ -29,7 +29,10 @@ func TestConvertToolUsage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := convertToolUsage(tt.toolUsage, tt.tools)
+			result, err := convertToolUsage(tt.toolUsage, tt.tools)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
 
 			if tt.expectNil && result != nil {
 				t.Errorf("expected nil result, got %v", result)

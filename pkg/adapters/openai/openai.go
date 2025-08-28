@@ -61,48 +61,32 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		chatReq.Tools = tools
 
 		// Convert tool usage to OpenAI format
-		toolChoice := convertToolUsage(request.ToolUsage, request.Tools)
+		toolChoice, err := convertToolUsage(request.ToolUsage, request.Tools)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert tool usage: %w", err)
+		}
+
 		if toolChoice != nil {
 			chatReq.ToolChoice = *toolChoice
 		}
-
-		// Debug: Log what we're sending
-		fmt.Printf("🔧 Debug: Sending %d tools to OpenAI\n", len(tools))
-		fmt.Printf("🔧 Debug: Tool usage strategy: %s\n", request.ToolUsage.Type())
-		for i, tool := range tools {
-			fmt.Printf("  Tool %d: %+v\n", i+1, tool)
-		}
 	}
 
-	// Debug: Log the request we're about to send
-	fmt.Printf("📤 Debug: Sending request to OpenAI:\n")
-	fmt.Printf("  Model: %s\n", chatReq.Model)
-	fmt.Printf("  Messages: %d\n", len(chatReq.Messages))
-	fmt.Printf("  Tools: %d\n", len(chatReq.Tools))
-	// Note: ToolChoice is not set to avoid the "Missing required parameter" error
-
-	// Make the API call
 	resp, err := a.client.Chat.Completions.New(ctx, chatReq)
 	if err != nil {
 		return nil, fmt.Errorf("OpenAI API call failed: %w", err)
 	}
 
-	// Convert the response to our format
 	response := llm.NewLLMResponse()
 
-	// Add the assistant's message
 	if len(resp.Choices) > 0 {
 		choice := resp.Choices[0]
 		if choice.Message.Content != "" {
-			// Create an assistant message from the content
 			textMsg := &llm.AssistantMessage{Content: choice.Message.Content}
 			response.AddMessage(textMsg)
 		}
 
-		// Handle tool calls if any
 		if choice.Message.ToolCalls != nil {
 			for _, toolCall := range choice.Message.ToolCalls {
-				// Convert OpenAI tool call to our format
 				ourToolCall := &llm.ToolCall{
 					Name: toolCall.Function.Name,
 					Args: json.RawMessage(toolCall.Function.Arguments),
