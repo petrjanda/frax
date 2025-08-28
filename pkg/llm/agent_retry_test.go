@@ -23,13 +23,11 @@ func (m *mockLLM) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse
 		return nil, errors.New("mock LLM failure")
 	}
 
-	// Return a corrected tool call
+	// Return corrected parameters in an assistant message (simplified formatter behavior)
 	return &LLMResponse{
-		Messages: []Message{},
-		ToolCalls: []*ToolCall{
-			{
-				Name: "test_tool",
-				Args: m.correctArgs,
+		Messages: []Message{
+			&AssistantMessage{
+				Content: string(m.correctArgs),
 			},
 		},
 	}, nil
@@ -79,17 +77,16 @@ func TestAgentRetryMechanism(t *testing.T) {
 
 		// Simulate a tool call response
 		response := &LLMResponse{
-			Messages: []Message{},
-			ToolCalls: []*ToolCall{
-				{
+			Messages: []Message{
+				NewToolCallMessage(&ToolCall{
 					Name: "test_tool",
 					Args: wrongArgs,
-				},
+				}),
 			},
 		}
 
 		// Test the retry mechanism
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls[0])
+		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
 
 		if err != nil {
 			t.Errorf("Expected tool to succeed after retry, got error: %v", err)
@@ -125,17 +122,16 @@ func TestAgentRetryMechanism(t *testing.T) {
 		request = request.Clone(WithTools(mockTool))
 
 		response := &LLMResponse{
-			Messages: []Message{},
-			ToolCalls: []*ToolCall{
-				{
+			Messages: []Message{
+				NewToolCallMessage(&ToolCall{
 					Name: "test_tool",
 					Args: json.RawMessage(`{"param": "wrong"}`),
-				},
+				}),
 			},
 		}
 
 		// Test the retry mechanism
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls[0])
+		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
 
 		if err == nil {
 			t.Error("Expected tool to fail after all retries")
@@ -199,17 +195,16 @@ func TestAgentRetryMechanism(t *testing.T) {
 		defer cancel()
 
 		response := &LLMResponse{
-			Messages: []Message{},
-			ToolCalls: []*ToolCall{
-				{
+			Messages: []Message{
+				NewToolCallMessage(&ToolCall{
 					Name: "test_tool",
 					Args: json.RawMessage(`{"param": "wrong"}`),
-				},
+				}),
 			},
 		}
 
 		// Test the retry mechanism with cancelled context
-		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls[0])
+		result, err := agent.(*Agent).CallToolWithRetry(ctx, response.ToolCalls()[0])
 
 		if err == nil {
 			t.Error("Expected context cancellation error")

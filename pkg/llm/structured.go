@@ -121,8 +121,9 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 	}
 
 	// Execute the LLM with structured output tool with the tool call arguments
-	if len(response.ToolCalls) > 0 {
-		toolCall := response.ToolCalls[0]
+	toolCalls := response.ToolCalls()
+	if len(toolCalls) > 0 {
+		toolCall := toolCalls[0]
 		result, err := f.Run(ctx, toolCall.Args)
 		if err != nil {
 			return nil, fmt.Errorf("LLM with structured output tool execution failed: %w", err)

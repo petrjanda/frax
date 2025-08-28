@@ -39,11 +39,12 @@ agent := llm.NewAgent(llm, tools, llm.WithInitialHistory(history))
 messages, err := agent.Loop(ctx, conversationHistory)
 ```
 
-**Retry Mechanism**: The agent automatically retries failed tool calls with LLM correction:
+**Retry Mechanism**: The agent automatically retries failed tool calls using a formatter-based approach:
 - Configurable retry count and timing
-- Feeds tool errors back to LLM for parameter correction
+- Uses the tool's input schema to guide parameter correction
+- Asks the LLM to generate valid parameters according to the schema
 - Exponential backoff between retries
-- Minimal token consumption for retries
+- Efficient parameter correction without complex tool orchestration
 
 ### 2. **LLM** (`llm/llm.go`)
 The `LLM` interface defines how to interact with language models. It handles requests, responses, and tool integration.

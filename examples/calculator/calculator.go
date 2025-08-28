@@ -177,13 +177,13 @@ func main() {
 
 		// Process the response
 		fmt.Printf("📊 Response received:\n")
-		fmt.Printf("  Tool calls: %d\n", len(response.ToolCalls))
+		fmt.Printf("  Tool calls: %d\n", len(response.ToolCalls()))
 		fmt.Printf("  Messages: %d\n", len(response.Messages))
 
 		// Check if tools were used
-		if response.CalledTool() {
+		if len(response.ToolCalls()) > 0 {
 			fmt.Println("  ✅ Tools were used!")
-			for j, toolCall := range response.ToolCalls {
+			for j, toolCall := range response.ToolCalls() {
 				fmt.Printf("    Tool call %d: %s\n", j+1, toolCall.Name)
 				fmt.Printf("    Arguments: %s\n", string(toolCall.Args))
 

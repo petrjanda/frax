@@ -74,18 +74,22 @@ func (m *SystemMessage) Role() MessageRole {
 	return MessageRoleSystem
 }
 
-// ToolMessage represents a message about a tool
-type ToolMessage struct {
+type ToolCallMessage struct {
 	ToolCall *ToolCall
-	Result   json.RawMessage
 }
 
-func (m *ToolMessage) Kind() MessageKind {
-	return MessageKindToolResult
+func NewToolCallMessage(toolCall *ToolCall) *ToolCallMessage {
+	return &ToolCallMessage{
+		ToolCall: toolCall,
+	}
 }
 
-func (m *ToolMessage) Role() MessageRole {
-	return MessageRoleTool
+func (m *ToolCallMessage) Kind() MessageKind {
+	return MessageKindToolCall
+}
+
+func (m *ToolCallMessage) Role() MessageRole {
+	return MessageRoleAssistant
 }
 
 // ToolResultMessage represents the result of a tool execution
@@ -104,6 +108,7 @@ func (m *ToolResultMessage) Role() MessageRole {
 
 // ToolCall represents a call to a tool
 type ToolCall struct {
+	ID   string
 	Name string
 	Args json.RawMessage
 }

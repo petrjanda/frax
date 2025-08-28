@@ -68,8 +68,7 @@ func NewHistory(messages ...Message) History {
 
 // LLMResponse represents a response from the LLM
 type LLMResponse struct {
-	Messages  []Message
-	ToolCalls []*ToolCall
+	Messages []Message
 }
 
 // NewLLMResponse creates a new empty LLM response
@@ -84,10 +83,17 @@ func (r *LLMResponse) AddMessage(message Message) {
 
 // AddToolCall adds a tool call to the response
 func (r *LLMResponse) AddToolCall(functionCall *ToolCall) {
-	r.ToolCalls = append(r.ToolCalls, functionCall)
+	r.Messages = append(r.Messages, NewToolCallMessage(functionCall))
 }
 
 // CalledTool returns true if the response contains tool calls
-func (r *LLMResponse) CalledTool() bool {
-	return len(r.ToolCalls) > 0
+func (r *LLMResponse) ToolCalls() []*ToolCall {
+	var toolCalls []*ToolCall
+	for _, msg := range r.Messages {
+		if msg.Kind() == MessageKindToolCall {
+			toolCalls = append(toolCalls, msg.(*ToolCallMessage).ToolCall)
+		}
+	}
+
+	return toolCalls
 }

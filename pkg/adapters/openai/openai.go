@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	openai "github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
@@ -49,6 +50,13 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 	// Convert our messages to OpenAI format
 	messages := a.convertMessages(request.History)
 
+	log.Println("===")
+
+	for _, msg := range messages {
+		payload, _ := json.Marshal(msg)
+		log.Println("msg", string(payload))
+	}
+
 	// Prepare the chat completion request
 	chatReq := openai.ChatCompletionNewParams{
 		Model:    shared.ChatModel(a.model),
@@ -88,6 +96,7 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		if choice.Message.ToolCalls != nil {
 			for _, toolCall := range choice.Message.ToolCalls {
 				ourToolCall := &llm.ToolCall{
+					ID:   toolCall.ID,
 					Name: toolCall.Function.Name,
 					Args: json.RawMessage(toolCall.Function.Arguments),
 				}
@@ -112,9 +121,28 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 		case *llm.SystemMessage:
 			openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
 
+		case *llm.ToolCallMessage:
+			// Convert tool call to assistant message with tool_calls
+			asst := openai.ChatCompletionAssistantMessageParam{
+				Role: "assistant",
+				ToolCalls: []openai.ChatCompletionMessageToolCallUnionParam{
+					{
+						OfFunction: &openai.ChatCompletionMessageFunctionToolCallParam{
+							ID: m.ToolCall.ID,
+							Function: openai.ChatCompletionMessageFunctionToolCallFunctionParam{
+								Name:      m.ToolCall.Name,
+								Arguments: string(m.ToolCall.Args),
+							},
+							Type: "function",
+						},
+					},
+				},
+			}
+			openaiMessages = append(openaiMessages, openai.ChatCompletionMessageParamUnion{OfAssistant: &asst})
+
 		case *llm.ToolResultMessage:
 			// Convert tool result to tool message
-			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.Name))
+			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.ID))
 
 		case *llm.ToolErrorMessage:
 			// Don't send tool error messages directly to OpenAI
