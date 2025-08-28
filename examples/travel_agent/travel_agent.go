@@ -111,11 +111,7 @@ func (h *HotelBookingTool) OutputSchemaRaw() json.RawMessage {
 func (h *HotelBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var request HotelBookingRequest
 	if err := json.Unmarshal(args, &request); err != nil {
-		// Provide more helpful error messages for common parsing issues
-		if err.Error() == "parsing time \"1st Nov\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"1st Nov\" as \"2006\"" {
-			return nil, fmt.Errorf("date format error: Please use ISO 8601 format (YYYY-MM-DD) like '2024-11-01' instead of '1st Nov'. The date field expects a specific format that Go can parse.")
-		}
-		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format.", err)
+		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format", err)
 	}
 
 	// Mock hotel booking - generate fake hotel details
