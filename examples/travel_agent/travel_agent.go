@@ -155,6 +155,11 @@ type HotelBookingRequest struct {
 	Guests   int       `json:"guests" jsonschema:"required"`
 }
 
+type TravelItinerary struct {
+	Flight Flight `json:"flight"`
+	Hotel  Hotel  `json:"hotel"`
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -176,12 +181,15 @@ func main() {
 		&HotelBookingTool{},
 	)
 
+	generator := schemas.NewOpenAISchemaGenerator()
+	itinerarySchema := generator.MustGenerateSchema(TravelItinerary{})
+
 	// Create agent with tools and retry configuration
 	agent := llm.NewAgent(openaiLLM, toolbox,
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
 		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
-
+		llm.WithOutputSchema(itinerarySchema),
 	)
 
 	// Create conversation history with the travel request
@@ -204,7 +212,7 @@ func main() {
 		Always validate and format dates properly before making bookings.
 	`),
 		llm.WithTemperature(0.0),
-		// llm.WithMaxCompletionTokens(1000)
+		llm.WithMaxCompletionTokens(1000),
 	))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)

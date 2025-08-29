@@ -19,6 +19,8 @@ type Agent struct {
 	maxRetries   int
 	retryDelay   time.Duration
 	retryBackoff float64
+
+	outputSchema *json.RawMessage
 }
 
 // AgentOpts represents options for configuring an agent
@@ -42,6 +44,12 @@ func WithRetryDelay(delay time.Duration) AgentOpts {
 func WithRetryBackoff(backoff float64) AgentOpts {
 	return func(a *Agent) {
 		a.retryBackoff = backoff
+	}
+}
+
+func WithOutputSchema(schema json.RawMessage) AgentOpts {
+	return func(a *Agent) {
+		a.outputSchema = &schema
 	}
 }
 
@@ -90,6 +98,16 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 		)
 
 		return a.Invoke(ctx, req)
+	}
+
+	if a.outputSchema != nil {
+		formatted := NewBaseLLMWithStructuredOutput(*a.outputSchema, a.llm)
+		formattedResponse, err := formatted.Invoke(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		return formattedResponse, nil
 	}
 
 	return response, nil
