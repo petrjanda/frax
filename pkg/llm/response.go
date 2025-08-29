@@ -1,7 +1,7 @@
 package llm
 
 type LLMResponse struct {
-	Messages []Message
+	Messages History
 }
 
 func NewLLMResponse() *LLMResponse {
@@ -9,11 +9,11 @@ func NewLLMResponse() *LLMResponse {
 }
 
 func (r *LLMResponse) AddMessage(message Message) {
-	r.Messages = append(r.Messages, message)
+	r.Messages = r.Messages.Append(message)
 }
 
 func (r *LLMResponse) AddToolCall(functionCall *ToolCall) {
-	r.Messages = append(r.Messages, NewToolCallMessage(functionCall))
+	r.Messages = r.Messages.Append(NewToolCallMessage(functionCall))
 }
 
 func (r *LLMResponse) ToolCalls() []*ToolCall {

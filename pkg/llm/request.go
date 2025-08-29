@@ -2,7 +2,7 @@ package llm
 
 type LLMRequest struct {
 	System    string
-	History   []Message
+	History   History
 	Tools     []Tool
 	ToolUsage ToolUsage
 
