@@ -37,96 +37,6 @@ type Hotel struct {
 	Address       string    `json:"address" jsonschema:"required"`
 }
 
-// FlightBookingTool is a mock tool for booking flights
-type FlightBookingTool struct{}
-
-func (f *FlightBookingTool) Name() string {
-	return "book_flight"
-}
-
-func (f *FlightBookingTool) Description() string {
-	return "Book a flight from one city to another. Provide departure and arrival cities, preferred dates, and travel class. IMPORTANT: Dates must be in ISO 8601 format (YYYY-MM-DD) like '2024-11-01' for November 1st, 2024."
-}
-
-func (f *FlightBookingTool) InputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema(FlightBookingRequest{})
-}
-
-func (f *FlightBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
-	var request FlightBookingRequest
-	if err := json.Unmarshal(args, &request); err != nil {
-		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format", err)
-	}
-
-	// Mock flight booking - generate fake flight details
-	departure := time.Now().AddDate(0, 0, 7) // 1 week from now
-	arrival := departure.Add(3 * time.Hour)  // 3 hour flight
-
-	flight := Flight{
-		FlightNumber: "SK1234",
-		From:         request.From,
-		To:           request.To,
-		Departure:    departure,
-		Arrival:      arrival,
-		Airline:      "Scandinavian Airlines",
-		Price:        299.99,
-		Class:        request.Class,
-	}
-
-	result, err := json.Marshal(flight)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal flight: %w", err)
-	}
-
-	return json.RawMessage(result), nil
-}
-
-// HotelBookingTool is a mock tool for booking hotels
-type HotelBookingTool struct{}
-
-func (h *HotelBookingTool) Name() string {
-	return "book_hotel"
-}
-
-func (h *HotelBookingTool) Description() string {
-	return "Book a hotel in a specific city. Provide city, check-in and check-out dates, and room type preferences. IMPORTANT: Dates must be in ISO 8601 format (YYYY-MM-DD) like '2024-11-01' for November 1st, 2024."
-}
-
-func (h *HotelBookingTool) InputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema(HotelBookingRequest{})
-}
-
-func (h *HotelBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
-	var request HotelBookingRequest
-	if err := json.Unmarshal(args, &request); err != nil {
-		return nil, fmt.Errorf("failed to parse request parameters: %w. Please ensure all required fields are provided in the correct format", err)
-	}
-
-	// Mock hotel booking - generate fake hotel details
-	checkIn := time.Now().AddDate(0, 0, 7) // 1 week from now
-	checkOut := checkIn.AddDate(0, 0, 4)   // 4 nights stay
-
-	hotel := Hotel{
-		HotelName:     "Hotel Barcelona Palace",
-		City:          request.City,
-		CheckIn:       checkIn,
-		CheckOut:      checkOut,
-		RoomType:      request.RoomType,
-		PricePerNight: 189.99,
-		TotalPrice:    189.99 * 4,
-		Address:       "Carrer de Balmes, 142, 08008 Barcelona, Spain",
-	}
-
-	result, err := json.Marshal(hotel)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal hotel: %w", err)
-	}
-
-	return json.RawMessage(result), nil
-}
-
 // FlightBookingRequest represents the input for booking a flight
 type FlightBookingRequest struct {
 	From       string    `json:"from" jsonschema:"required"`
@@ -150,6 +60,45 @@ type TravelItinerary struct {
 	Hotel  Hotel  `json:"hotel"`
 }
 
+// Tool functions - clean and typed!
+func bookFlight(ctx context.Context, request FlightBookingRequest) (Flight, error) {
+	// Mock flight booking - generate fake flight details
+	departure := time.Now().AddDate(0, 0, 7) // 1 week from now
+	arrival := departure.Add(3 * time.Hour)  // 3 hour flight
+
+	flight := Flight{
+		FlightNumber: "SK1234",
+		From:         request.From,
+		To:           request.To,
+		Departure:    departure,
+		Arrival:      arrival,
+		Airline:      "Scandinavian Airlines",
+		Price:        299.99,
+		Class:        request.Class,
+	}
+
+	return flight, nil
+}
+
+func bookHotel(ctx context.Context, request HotelBookingRequest) (Hotel, error) {
+	// Mock hotel booking - generate fake hotel details
+	checkIn := time.Now().AddDate(0, 0, 7) // 1 week from now
+	checkOut := checkIn.AddDate(0, 0, 4)   // 4 nights stay
+
+	hotel := Hotel{
+		HotelName:     "Hotel Barcelona Palace",
+		City:          request.City,
+		CheckIn:       checkIn,
+		CheckOut:      checkOut,
+		RoomType:      request.RoomType,
+		PricePerNight: 189.99,
+		TotalPrice:    189.99 * 4,
+		Address:       "Carrer de Balmes, 142, 08008 Barcelona, Spain",
+	}
+
+	return hotel, nil
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -165,12 +114,25 @@ func main() {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
-	// Create travel booking toolbox
-	toolbox := llm.NewToolbox(
-		&FlightBookingTool{},
-		&HotelBookingTool{},
+	// Create tools using the generic helper - much cleaner!
+	flightTool := llm.CreateTool(
+		"book_flight",
+		`Book a flight from one city to another. 
+		Provide departure and arrival cities, preferred dates, and travel class.`,
+		bookFlight,
 	)
 
+	hotelTool := llm.CreateTool(
+		"book_hotel",
+		`Book a hotel in a specific city. 
+		Provide city, check-in and check-out dates, and room type preferences.`,
+		bookHotel,
+	)
+
+	// Create toolbox
+	toolbox := llm.NewToolbox(flightTool, hotelTool)
+
+	// Create schema for the output
 	generator := schemas.NewOpenAISchemaGenerator()
 	itinerarySchema := generator.MustGenerateSchema(TravelItinerary{})
 
@@ -184,22 +146,25 @@ func main() {
 
 	// Create conversation history with the travel request
 	history := llm.NewHistory(
-		llm.NewUserMessage("I need to book travel to Barcelona. I will be flying from Copenhagen. Please book me a flight and a hotel for a 4-night stay starting next week. I prefer economy class for the flight and a standard room for the hotel. I will travel 1st Nov out and 3rd Nov back. Note: Please use ISO 8601 date format (YYYY-MM-DD) for all dates, for example '2024-11-01' for November 1st."),
+		llm.NewUserMessage(`
+			I need to book travel to Barcelona. 
+			I will be flying from Copenhagen. 
+			Please book me a flight and a hotel for a 4-night stay starting next week. 
+			I prefer economy class for the flight and a standard room for the hotel. 
+			I will travel 1st Nov out and 3rd Nov back.
+		`),
 	)
-
-	fmt.Println("🚀 Starting Travel Agent...")
-	fmt.Println("📍 Task: Book travel to Barcelona from Copenhagen")
-	fmt.Println("🛫 Tools available: book_flight, book_hotel")
-	fmt.Println("============================================================")
 
 	// Run the agent
 	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history,
 		llm.WithSystem(`
 		You are a travel agent. You are given a task to book travel to a specific city.
 		You have two tools available to you: book_flight and book_hotel.
-		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
 		This is required for both flight and hotel bookings.
 		Always validate and format dates properly before making bookings.
+
+		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. 
+		Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
 	`),
 		llm.WithTemperature(0.0),
 		llm.WithMaxCompletionTokens(1000),
@@ -208,25 +173,12 @@ func main() {
 		log.Fatalf("Agent failed: %v", err)
 	}
 
-	fmt.Println("\n============================================================")
-	fmt.Println("🎉 Travel Agent completed the task!")
-	fmt.Println("📝 Final conversation:")
-	fmt.Println("============================================================")
-
 	// Print the conversation
-	for i, msg := range response.Messages {
-		switch m := msg.(type) {
-		case *llm.UserMessage:
-			fmt.Printf("\n👤 User %d: %s\n", i+1, m.Content)
-		case *llm.ToolResultMessage:
-			fmt.Printf("\n🔧 Tool Result %d: %s\n", i+1, string(m.Result))
-		case *llm.AssistantMessage:
-			fmt.Printf("\n🤖 Assistant %d: %s\n", i+1, m.Content)
-		default:
-			fmt.Printf("\n💬 Message %d: %+v\n", i+1, msg)
+	for _, msg := range response.Messages {
+		payload, err := json.Marshal(msg)
+		if err != nil {
+			log.Fatalf("Failed to marshal message: %v", err)
 		}
+		fmt.Println(string(payload))
 	}
-
-	fmt.Println("\n============================================================")
-	fmt.Println("✨ Travel booking completed successfully!")
 }
