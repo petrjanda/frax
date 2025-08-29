@@ -80,6 +80,13 @@ func bookFlight(ctx context.Context, request FlightBookingRequest) (Flight, erro
 	return flight, nil
 }
 
+var flightTool = llm.CreateTool(
+	"book_flight",
+	`Book a flight from one city to another. 
+	Provide departure and arrival cities, preferred dates, and travel class.`,
+	bookFlight,
+)
+
 func bookHotel(ctx context.Context, request HotelBookingRequest) (Hotel, error) {
 	// Mock hotel booking - generate fake hotel details
 	checkIn := time.Now().AddDate(0, 0, 7) // 1 week from now
@@ -99,6 +106,13 @@ func bookHotel(ctx context.Context, request HotelBookingRequest) (Hotel, error) 
 	return hotel, nil
 }
 
+var hotelTool = llm.CreateTool(
+	"book_hotel",
+	`Book a hotel in a specific city. 
+	Provide city, check-in and check-out dates, and room type preferences.`,
+	bookHotel,
+)
+
 func main() {
 	ctx := context.Background()
 
@@ -114,34 +128,18 @@ func main() {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
-	// Create tools using the generic helper - much cleaner!
-	flightTool := llm.CreateTool(
-		"book_flight",
-		`Book a flight from one city to another. 
-		Provide departure and arrival cities, preferred dates, and travel class.`,
-		bookFlight,
-	)
-
-	hotelTool := llm.CreateTool(
-		"book_hotel",
-		`Book a hotel in a specific city. 
-		Provide city, check-in and check-out dates, and room type preferences.`,
-		bookHotel,
-	)
-
-	// Create toolbox
-	toolbox := llm.NewToolbox(flightTool, hotelTool)
-
-	// Create schema for the output
-	generator := schemas.NewOpenAISchemaGenerator()
-	itinerarySchema := generator.MustGenerateSchema(TravelItinerary{})
-
 	// Create agent with tools and retry configuration
-	agent := llm.NewAgent(openaiLLM, toolbox,
+	agent := llm.NewAgent(openaiLLM,
+		llm.NewToolbox(flightTool, hotelTool),
+
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
 		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
-		llm.WithOutputSchema(itinerarySchema),
+		llm.WithOutputSchema(
+			schemas.
+				NewOpenAISchemaGenerator().
+				MustGenerateSchema(TravelItinerary{}),
+		),
 	)
 
 	// Create conversation history with the travel request
@@ -149,9 +147,9 @@ func main() {
 		llm.NewUserMessage(`
 			I need to book travel to Barcelona. 
 			I will be flying from Copenhagen. 
-			Please book me a flight and a hotel for a 4-night stay starting next week. 
-			I prefer economy class for the flight and a standard room for the hotel. 
-			I will travel 1st Nov out and 3rd Nov back.
+			Please book me a flight and a hotel for a 4-night stay. 
+			I prefer premium economy class for the flight and a luxury room for the hotel. 
+			I will flying out at 1st Nov.
 		`),
 	)
 
@@ -161,7 +159,6 @@ func main() {
 		You are a travel agent. You are given a task to book travel to a specific city.
 		You have two tools available to you: book_flight and book_hotel.
 		This is required for both flight and hotel bookings.
-		Always validate and format dates properly before making bookings.
 
 		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. 
 		Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
