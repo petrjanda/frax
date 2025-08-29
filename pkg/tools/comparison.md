@@ -21,18 +21,13 @@ func (f *FlightBookingTool) InputSchemaRaw() json.RawMessage {
     return generator.MustGenerateSchema(FlightRequest{})
 }
 
-func (f *FlightBookingTool) OutputSchemaRaw() json.RawMessage {
-    generator := schemas.NewOpenAISchemaGenerator()
-    return generator.MustGenerateSchema(Flight{})
-}
-
 func (f *FlightBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
     // Your actual tool logic here
     var request FlightRequest
     if err := json.Unmarshal(args, &request); err != nil {
         return nil, err
     }
-    
+
     // Process the request...
     flight := Flight{...}
     return json.Marshal(flight)
@@ -58,7 +53,7 @@ flightTool := tools.NewSimpleTool(tools.ToolConfig{
     if err := json.Unmarshal(args, &request); err != nil {
         return nil, err
     }
-    
+
     // Process the request...
     flight := Flight{...}
     return json.Marshal(flight)
@@ -82,7 +77,7 @@ flightTool := tools.AutoToolWithName("book_flight",
         if err := json.Unmarshal(args, &request); err != nil {
             return nil, err
         }
-        
+
         // Process the request...
         flight := Flight{...}
         return json.Marshal(flight)
@@ -95,13 +90,13 @@ flightTool := tools.AutoToolWithName("book_flight",
 
 ## Benefits Summary
 
-| Aspect | Manual | Helper | Auto-Generated |
-|--------|--------|--------|----------------|
-| **Total Lines** | 25 | 15 | 12 |
-| **Boilerplate** | 15 (60%) | 5 (33%) | 2 (17%) |
-| **Actual Logic** | 10 (40%) | 10 (67%) | 10 (83%) |
-| **Code Reduction** | - | 40% | 52% |
-| **Maintenance** | High | Low | Very Low |
+| Aspect             | Manual   | Helper   | Auto-Generated |
+| ------------------ | -------- | -------- | -------------- |
+| **Total Lines**    | 25       | 15       | 12             |
+| **Boilerplate**    | 15 (60%) | 5 (33%)  | 2 (17%)        |
+| **Actual Logic**   | 10 (40%) | 10 (67%) | 10 (83%)       |
+| **Code Reduction** | -        | 40%      | 52%            |
+| **Maintenance**    | High     | Low      | Very Low       |
 
 ## What's Automatically Generated
 
@@ -109,14 +104,14 @@ flightTool := tools.AutoToolWithName("book_flight",
 ✅ **Output Schema**: JSON schema from your Go types  
 ✅ **Name**: Can be auto-generated from type names  
 ✅ **Description**: Can be auto-generated from type names  
-✅ **Interface Implementation**: All required methods  
+✅ **Interface Implementation**: All required methods
 
 ## What You Still Control
 
 🎯 **Tool Logic**: Your `Run` function implementation  
 🎯 **Custom Names**: Override auto-generated names if needed  
 🎯 **Custom Descriptions**: Override auto-generated descriptions if needed  
-🎯 **Type Safety**: Full Go type safety for inputs/outputs  
+🎯 **Type Safety**: Full Go type safety for inputs/outputs
 
 ## Migration Path
 
@@ -125,4 +120,4 @@ flightTool := tools.AutoToolWithName("book_flight",
 3. **Go Full Auto**: Use `AutoTool()` for maximum automation
 4. **Customize as Needed**: Mix and match approaches
 
-The tools helper package transforms tool creation from a boilerplate-heavy task to a focused, logic-first experience! 
+The tools helper package transforms tool creation from a boilerplate-heavy task to a focused, logic-first experience!

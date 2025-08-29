@@ -45,9 +45,6 @@ func (m *mockTool) Description() string { return "Mock tool for testing" }
 func (m *mockTool) InputSchemaRaw() json.RawMessage {
 	return json.RawMessage(`{"type": "object"}`)
 }
-func (m *mockTool) OutputSchemaRaw() json.RawMessage {
-	return json.RawMessage(`{"type": "object"}`)
-}
 func (m *mockTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	if m.shouldFail && string(args) != string(m.correctArgs) {
 		return nil, errors.New("invalid arguments")

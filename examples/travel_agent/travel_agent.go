@@ -53,11 +53,6 @@ func (f *FlightBookingTool) InputSchemaRaw() json.RawMessage {
 	return generator.MustGenerateSchema(FlightBookingRequest{})
 }
 
-func (f *FlightBookingTool) OutputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema(Flight{})
-}
-
 func (f *FlightBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var request FlightBookingRequest
 	if err := json.Unmarshal(args, &request); err != nil {
@@ -101,11 +96,6 @@ func (h *HotelBookingTool) Description() string {
 func (h *HotelBookingTool) InputSchemaRaw() json.RawMessage {
 	generator := schemas.NewOpenAISchemaGenerator()
 	return generator.MustGenerateSchema(HotelBookingRequest{})
-}
-
-func (h *HotelBookingTool) OutputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema(Hotel{})
 }
 
 func (h *HotelBookingTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {

@@ -44,11 +44,6 @@ func TestGenericTool(t *testing.T) {
 		t.Error("Input schema should not be nil")
 	}
 
-	outputSchema := tool.OutputSchemaRaw()
-	if outputSchema == nil {
-		t.Error("Output schema should not be nil")
-	}
-
 	// Test tool execution
 	ctx := context.Background()
 	input := TestInput{Name: "John", Age: 30}

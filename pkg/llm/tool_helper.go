@@ -41,12 +41,6 @@ func (g *GenericTool[I, O]) InputSchemaRaw() json.RawMessage {
 	return generator.MustGenerateSchema((*I)(nil))
 }
 
-// OutputSchemaRaw returns the JSON schema for the tool's output type O
-func (g *GenericTool[I, O]) OutputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema((*O)(nil))
-}
-
 // Run executes the tool with the given arguments, automatically handling JSON marshalling/unmarshalling
 func (g *GenericTool[I, O]) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	// Unmarshal the input arguments to type I

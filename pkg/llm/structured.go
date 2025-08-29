@@ -77,11 +77,6 @@ func (f *BaseLLMWithStructuredOutput) InputSchemaRaw() json.RawMessage {
 	return f.inputSchema
 }
 
-// OutputSchemaRaw returns the output schema as raw JSON (same as input for LLMs with structured output)
-func (f *BaseLLMWithStructuredOutput) OutputSchemaRaw() json.RawMessage {
-	return f.inputSchema
-}
-
 // ValidateInput validates the input against the schema
 func (f *BaseLLMWithStructuredOutput) ValidateInput(input json.RawMessage) error {
 	// For now, just return nil - could add JSON schema validation here

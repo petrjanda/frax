@@ -45,22 +45,6 @@ func (c *MathCalculator) InputSchemaRaw() json.RawMessage {
 	}`)
 }
 
-func (c *MathCalculator) OutputSchemaRaw() json.RawMessage {
-	return json.RawMessage(`{
-		"type": "object",
-		"properties": {
-			"result": {
-				"type": "number",
-				"description": "The result of the calculation"
-			},
-			"operation": {
-				"type": "string",
-				"description": "The operation that was performed"
-			}
-		}
-	}`)
-}
-
 func (c *MathCalculator) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var input struct {
 		Operation string  `json:"operation"`

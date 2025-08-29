@@ -21,7 +21,6 @@ GenericTool[I, O] implements Tool interface
 ├── Name() string
 ├── Description() string  
 ├── InputSchemaRaw() json.RawMessage
-├── OutputSchemaRaw() json.RawMessage
 └── Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error)
 ```
 

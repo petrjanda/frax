@@ -32,9 +32,6 @@ type Tool interface {
 	// InputSchemaRaw returns the JSON schema for the tool's input
 	InputSchemaRaw() json.RawMessage
 
-	// OutputSchemaRaw returns the JSON schema for the tool's output
-	OutputSchemaRaw() json.RawMessage
-
 	// Run executes the tool with the given arguments
 	Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error)
 }
