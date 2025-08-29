@@ -85,7 +85,11 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 			}
 		}
 
-		return a.Invoke(ctx, NewLLMRequest(append(request.History, response.Messages...)))
+		req = req.Clone(
+			WithHistory(append(request.History, response.Messages...)),
+		)
+
+		return a.Invoke(ctx, req)
 	}
 
 	return response, nil

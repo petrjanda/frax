@@ -195,13 +195,17 @@ func main() {
 	fmt.Println("============================================================")
 
 	// Run the agent
-	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history, llm.WithSystem(`
+	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history,
+		llm.WithSystem(`
 		You are a travel agent. You are given a task to book travel to a specific city.
 		You have two tools available to you: book_flight and book_hotel.
-		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values.
+		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
 		This is required for both flight and hotel bookings.
 		Always validate and format dates properly before making bookings.
-	`)))
+	`),
+		llm.WithTemperature(0.0),
+		// llm.WithMaxCompletionTokens(1000)
+	))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)
 	}
