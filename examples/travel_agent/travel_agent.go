@@ -13,6 +13,12 @@ import (
 	"github.com/petrjanda/frax/pkg/llm"
 )
 
+// TravelItinerary represents the itinerary for a travel booking
+type TravelItinerary struct {
+	Flight Flight `json:"flight"`
+	Hotel  Hotel  `json:"hotel"`
+}
+
 // Flight represents a flight booking
 type Flight struct {
 	FlightNumber string    `json:"flight_number" jsonschema:"required"`
@@ -37,6 +43,8 @@ type Hotel struct {
 	Address       string    `json:"address" jsonschema:"required"`
 }
 
+// TOOLS
+
 // FlightBookingRequest represents the input for booking a flight
 type FlightBookingRequest struct {
 	From       string    `json:"from" jsonschema:"required"`
@@ -45,6 +53,35 @@ type FlightBookingRequest struct {
 	Class      string    `json:"class" jsonschema:"required"`
 	Passengers int       `json:"passengers" jsonschema:"required"`
 }
+
+type Airline struct{}
+
+// Tool functions - clean and typed!
+func (f *Airline) bookFlight(ctx context.Context, request FlightBookingRequest) (Flight, error) {
+	departure := request.Date.Add(2 * time.Hour)
+	arrival := departure.Add(3 * time.Hour) // 3 hour flight
+
+	flight := Flight{
+		From:      request.From,
+		To:        request.To,
+		Departure: departure,
+		Arrival:   arrival,
+		Class:     request.Class,
+
+		FlightNumber: "SK1234",
+		Airline:      "Scandinavian Airlines",
+		Price:        299.99,
+	}
+
+	return flight, nil
+}
+
+var flightTool = llm.CreateTool(
+	"book_flight",
+	`Book a flight from one city to another. 
+	Provide departure and arrival cities, preferred dates, and travel class.`,
+	(&Airline{}).bookFlight,
+)
 
 // HotelBookingRequest represents the input for booking a hotel
 type HotelBookingRequest struct {
@@ -55,49 +92,14 @@ type HotelBookingRequest struct {
 	Guests   int       `json:"guests" jsonschema:"required"`
 }
 
-type TravelItinerary struct {
-	Flight Flight `json:"flight"`
-	Hotel  Hotel  `json:"hotel"`
-}
-
-// Tool functions - clean and typed!
-func bookFlight(ctx context.Context, request FlightBookingRequest) (Flight, error) {
-	// Mock flight booking - generate fake flight details
-	departure := time.Now().AddDate(0, 0, 7) // 1 week from now
-	arrival := departure.Add(3 * time.Hour)  // 3 hour flight
-
-	flight := Flight{
-		FlightNumber: "SK1234",
-		From:         request.From,
-		To:           request.To,
-		Departure:    departure,
-		Arrival:      arrival,
-		Airline:      "Scandinavian Airlines",
-		Price:        299.99,
-		Class:        request.Class,
-	}
-
-	return flight, nil
-}
-
-var flightTool = llm.CreateTool(
-	"book_flight",
-	`Book a flight from one city to another. 
-	Provide departure and arrival cities, preferred dates, and travel class.`,
-	bookFlight,
-)
-
 func bookHotel(ctx context.Context, request HotelBookingRequest) (Hotel, error) {
-	// Mock hotel booking - generate fake hotel details
-	checkIn := time.Now().AddDate(0, 0, 7) // 1 week from now
-	checkOut := checkIn.AddDate(0, 0, 4)   // 4 nights stay
-
 	hotel := Hotel{
+		City:     request.City,
+		CheckIn:  request.CheckIn,
+		CheckOut: request.CheckOut,
+		RoomType: request.RoomType,
+
 		HotelName:     "Hotel Barcelona Palace",
-		City:          request.City,
-		CheckIn:       checkIn,
-		CheckOut:      checkOut,
-		RoomType:      request.RoomType,
 		PricePerNight: 189.99,
 		TotalPrice:    189.99 * 4,
 		Address:       "Carrer de Balmes, 142, 08008 Barcelona, Spain",
@@ -135,12 +137,22 @@ func main() {
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
 		llm.WithRetryBackoff(1.5),                // 1.5x backoff multiplier
+
 		llm.WithOutputSchema(
 			schemas.
 				NewOpenAISchemaGenerator().
 				MustGenerateSchema(TravelItinerary{}),
 		),
 	)
+
+	system := `
+		You are a travel agent. You are given a task to book travel to a specific city.
+		You have two tools available to you: book_flight and book_hotel.
+		This is required for both flight and hotel bookings.
+
+		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. 
+		Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
+	`
 
 	// Create conversation history with the travel request
 	history := llm.NewHistory(
@@ -154,18 +166,14 @@ func main() {
 	)
 
 	// Run the agent
-	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history,
-		llm.WithSystem(`
-		You are a travel agent. You are given a task to book travel to a specific city.
-		You have two tools available to you: book_flight and book_hotel.
-		This is required for both flight and hotel bookings.
+	response, err := agent.Invoke(ctx,
+		llm.NewLLMRequest(history,
+			llm.WithSystem(system),
+			llm.WithTemperature(0.0),
+			llm.WithMaxCompletionTokens(1000),
+		),
+	)
 
-		When working with dates, always use RFC3339 format (e.g. 2024-01-01T15:04:05Z) for all date/time values. 
-		Example: "2024-01-01T15:04:05Z" for January 1st, 2024 at 3pm.
-	`),
-		llm.WithTemperature(0.0),
-		llm.WithMaxCompletionTokens(1000),
-	))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)
 	}
