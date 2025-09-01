@@ -45,8 +45,8 @@ type Hotel struct {
 
 // TOOLS
 
-// FlightBookingRequest represents the input for booking a flight
-type FlightBookingRequest struct {
+// FlightBooking represents the input for booking a flight
+type FlightBooking struct {
 	From       string    `json:"from" jsonschema:"required"`
 	To         string    `json:"to" jsonschema:"required"`
 	Date       time.Time `json:"date" jsonschema:"required,description=Must be in RFC3339 format (e.g. 2024-01-01T15:04:05Z)"`
@@ -57,7 +57,7 @@ type FlightBookingRequest struct {
 type Airline struct{}
 
 // Tool functions - clean and typed!
-func (f *Airline) bookFlight(ctx context.Context, request FlightBookingRequest) (Flight, error) {
+func (f *Airline) bookFlight(ctx context.Context, request FlightBooking) (Flight, error) {
 	departure := request.Date.Add(2 * time.Hour)
 	arrival := departure.Add(3 * time.Hour) // 3 hour flight
 
@@ -132,7 +132,6 @@ func main() {
 
 	// Create agent with tools and retry configuration
 	agent := llm.NewAgent(openaiLLM,
-		llm.NewToolbox(flightTool, hotelTool),
 
 		llm.WithMaxRetries(3),                    // Allow up to 3 retries
 		llm.WithRetryDelay(200*time.Millisecond), // Start with 200ms delay
@@ -171,6 +170,7 @@ func main() {
 			llm.WithSystem(system),
 			llm.WithTemperature(0.0),
 			llm.WithMaxCompletionTokens(1000),
+			llm.WithTools(flightTool, hotelTool),
 		),
 	)
 

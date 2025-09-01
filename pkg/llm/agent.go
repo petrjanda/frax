@@ -13,8 +13,7 @@ import (
 
 // Agent represents an agent that can use tools and interact with an LLM
 type Agent struct {
-	llm   LLM
-	tools []Tool
+	llm LLM
 
 	maxRetries   int
 	retryDelay   time.Duration
@@ -54,10 +53,9 @@ func WithOutputSchema(schema json.RawMessage) AgentOpts {
 }
 
 // NewAgent creates a new agent with the given LLM and tools
-func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) LLM {
+func NewAgent(llm LLM, opts ...AgentOpts) LLM {
 	a := &Agent{
 		llm:          llm,
-		tools:        tools,
 		maxRetries:   3,                      // Default: 3 retries
 		retryDelay:   100 * time.Millisecond, // Default: 100ms initial delay
 		retryBackoff: 2.0,                    // Default: 2x backoff
@@ -72,12 +70,7 @@ func NewAgent(llm LLM, tools []Tool, opts ...AgentOpts) LLM {
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
 func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
-	req := request.Clone(
-		WithTools(a.tools...),
-		WithToolUsage(AutoToolSelection()),
-	)
-
-	response, err := a.llm.Invoke(ctx, req)
+	response, err := a.llm.Invoke(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +78,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 	toolCalls := response.ToolCalls()
 	if len(toolCalls) > 0 {
 		for _, toolCall := range toolCalls {
-			message, err := a.CallTool(ctx, toolCall)
+			message, err := a.CallTool(ctx, request.Tools, toolCall)
 			if err != nil {
 				response.AddMessage(NewToolResultErrorMessage(toolCall, err.Error()))
 			} else {
@@ -93,16 +86,16 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 			}
 		}
 
-		req = req.Clone(
+		request = request.Clone(
 			WithHistory(request.History.Append(response.Messages...)),
 		)
 
-		return a.Invoke(ctx, req)
+		return a.Invoke(ctx, request)
 	}
 
 	if a.outputSchema != nil {
 		formatted := NewBaseLLMWithStructuredOutput(*a.outputSchema, a.llm)
-		formattedResponse, err := formatted.Invoke(ctx, req)
+		formattedResponse, err := formatted.Invoke(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -114,9 +107,9 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 }
 
 // CallTool executes a tool call with retry logic using a formatter approach
-func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, error) {
+func (a *Agent) CallTool(ctx context.Context, toolbox Toolbox, toolCall *ToolCall) (Message, error) {
 	// Find the tool to get its input schema
-	targetTool, err := a.findTool(toolCall.Name)
+	targetTool, err := a.findTool(toolbox, toolCall.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +118,8 @@ func (a *Agent) CallTool(ctx context.Context, toolCall *ToolCall) (Message, erro
 }
 
 // findTool finds a tool by name from the agent's tool list
-func (a *Agent) findTool(name string) (Tool, error) {
-	for _, t := range a.tools {
+func (a *Agent) findTool(toolbox Toolbox, name string) (Tool, error) {
+	for _, t := range toolbox {
 		if t.Name() == name {
 			return t, nil
 		}

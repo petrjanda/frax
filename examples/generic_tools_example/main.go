@@ -79,11 +79,8 @@ func main() {
 		getWeather,
 	)
 
-	// Create toolbox
-	toolbox := llm.NewToolbox(calculatorTool, weatherTool)
-
 	// Create agent
-	agent := llm.NewAgent(openaiLLM, toolbox)
+	agent := llm.NewAgent(openaiLLM)
 
 	// Create conversation history
 	history := llm.NewHistory(
@@ -98,6 +95,7 @@ func main() {
 	response, err := agent.Invoke(ctx, llm.NewLLMRequest(history,
 		llm.WithSystem("You are a helpful assistant with access to calculator and weather tools."),
 		llm.WithTemperature(0.0),
+		llm.WithTools(calculatorTool, weatherTool),
 	))
 	if err != nil {
 		log.Fatalf("Agent failed: %v", err)
