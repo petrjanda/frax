@@ -32,6 +32,11 @@ func NewOpenAISchemaGenerator() *OpenAISchemaGenerator {
 		AllowAdditionalProperties: true,
 	}
 
+	if err := reflector.AddGoComments("github.com/petrjanda/frax", "./"); err != nil {
+		// deal with error
+		panic(err)
+	}
+
 	return &OpenAISchemaGenerator{
 		reflector: reflector,
 	}
