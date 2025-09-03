@@ -50,11 +50,11 @@ func (e *LoggingSuiteEvents) OnSuiteError(error error) {
 }
 
 func (e *LoggingSuiteEvents) OnCaseStart(variant *llm.LLMRequest, case_ *Case) {
-	fmt.Printf("%s | case '%s'\n", variant.Model, case_)
+	// fmt.Printf("%s | case '%s'\n", variant.Model, case_)
 }
 
 func (e *LoggingSuiteEvents) OnCaseEnd(variant *llm.LLMRequest, case_ *Case, errors []error) {
-	fmt.Printf("%s |  = total=%d, ok=%d, error=%d\n", variant.Model, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
+	fmt.Printf("%s | case '%s' = total=%d, ok=%d, error=%d\n", variant.Model, case_, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
 	// fmt.Println("")
 
 }
