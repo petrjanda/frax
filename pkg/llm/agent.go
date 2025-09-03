@@ -232,7 +232,7 @@ func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetT
 		prettyJSON(toolCall.Args),
 	))
 
-	retryRequest := NewLLMRequest(NewHistory(errorMessage))
+	retryRequest := NewLLMRequest(WithHistory(NewHistory(errorMessage)))
 	formatter := NewBaseLLMWithStructuredOutput(targetTool.InputSchemaRaw(), a.llm)
 
 	// Get corrected parameters from the LLM

@@ -48,15 +48,19 @@ func WithTemperature(temperature float64) LLMRequestOpts {
 	}
 }
 
-func NewLLMRequest(history History, opts ...LLMRequestOpts) *LLMRequest {
+func NewLLMRequest(opts ...LLMRequestOpts) *LLMRequest {
 	r := &LLMRequest{
-		History:   history,
 		ToolUsage: AutoToolSelection(), // Default to auto tool selection
 	}
 	for _, opt := range opts {
 		opt(r)
 	}
 
+	return r
+}
+
+func (r *LLMRequest) With(opt LLMRequestOpts) *LLMRequest {
+	opt(r)
 	return r
 }
 

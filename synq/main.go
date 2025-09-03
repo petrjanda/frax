@@ -63,7 +63,8 @@ func main() {
 
 		// Run the agent
 		response, err := structuredLLM.Invoke(ctx,
-			llm.NewLLMRequest(history,
+			llm.NewLLMRequest(
+				llm.WithHistory(history),
 				llm.WithSystem(system),
 				llm.WithTemperature(0.0),
 				llm.WithMaxCompletionTokens(1000),
