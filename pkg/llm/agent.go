@@ -20,6 +20,8 @@ type Agent struct {
 	retryBackoff float64
 
 	outputSchema *json.RawMessage
+
+	events AgentEvents
 }
 
 // AgentOpts represents options for configuring an agent
@@ -52,6 +54,12 @@ func WithOutputSchema(schema json.RawMessage) AgentOpts {
 	}
 }
 
+func WithEvents(events AgentEvents) AgentOpts {
+	return func(a *Agent) {
+		a.events = events
+	}
+}
+
 // NewAgent creates a new agent with the given LLM and tools
 func NewAgent(llm LLM, opts ...AgentOpts) LLM {
 	a := &Agent{
@@ -59,6 +67,7 @@ func NewAgent(llm LLM, opts ...AgentOpts) LLM {
 		maxRetries:   3,                      // Default: 3 retries
 		retryDelay:   100 * time.Millisecond, // Default: 100ms initial delay
 		retryBackoff: 2.0,                    // Default: 2x backoff
+		events:       &NoopAgentEvents{},
 	}
 
 	for _, opt := range opts {
@@ -70,8 +79,10 @@ func NewAgent(llm LLM, opts ...AgentOpts) LLM {
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
 func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
+	a.events.OnRequest(ctx, request)
 	response, err := a.llm.Invoke(ctx, request)
 	if err != nil {
+		a.events.OnRequestError(ctx, request, err)
 		return nil, err
 	}
 
@@ -90,6 +101,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 			WithHistory(request.History.Append(response.Messages...)),
 		)
 
+		a.events.OnResponse(ctx, request, response)
 		return a.Invoke(ctx, request)
 	}
 
@@ -100,9 +112,11 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 			return nil, err
 		}
 
+		a.events.OnResponse(ctx, request, formattedResponse)
 		return formattedResponse, nil
 	}
 
+	a.events.OnResponse(ctx, request, response)
 	return response, nil
 }
 
@@ -176,21 +190,13 @@ func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targ
 		return nil, err
 	}
 
-	return &ToolResultMessage{
-		ToolCall: toolCall,
-		Result:   result,
-	}, nil
+	return NewToolResultMessage(toolCall, result), nil
 }
 
 // handleToolFailure handles tool failure and attempts to get corrected parameters
 func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targetTool Tool, attempt int, err error) (*ToolCall, bool) {
-	// Log the retry attempt for debugging
-	slog.Info("Tool call failed, asking LLM to correct parameters",
-		"tool", toolCall.Name,
-		"attempt", attempt+1,
-		"max_attempts", a.maxRetries,
-		"error", err.Error(),
-	)
+
+	a.events.OnToolError(ctx, toolCall, attempt, err)
 
 	// Get corrected parameters from the LLM
 	correctedArgs, err := a.correctToolCall(ctx, toolCall, targetTool, err)
@@ -237,7 +243,7 @@ func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetT
 
 	// Extract the corrected parameters from the LLM response
 	if len(retryResponse.Messages) > 0 {
-		if userMessage, ok := retryResponse.Messages[0].(*UserMessage); ok {
+		if userMessage, ok := retryResponse.Messages[0].(*TextMessage); ok {
 			slog.Info("Retry response", "response", userMessage.Content)
 			return []byte(userMessage.Content), nil
 		}

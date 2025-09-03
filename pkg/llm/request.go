@@ -1,13 +1,13 @@
 package llm
 
 type LLMRequest struct {
-	System    string
-	History   History
-	Tools     []Tool
-	ToolUsage ToolUsage
+	System    string    `json:"system"`
+	History   History   `json:"history"`
+	Tools     []Tool    `json:"tools"`
+	ToolUsage ToolUsage `json:"tool_usage"`
 
-	MaxCompletionTokens int
-	Temperature         float64
+	MaxCompletionTokens int     `json:"max_completion_tokens"`
+	Temperature         float64 `json:"temperature"`
 }
 
 type LLMRequestOpts = func(*LLMRequest)

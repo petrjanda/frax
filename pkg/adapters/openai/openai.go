@@ -94,7 +94,7 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 	if len(resp.Choices) > 0 {
 		choice := resp.Choices[0]
 		if choice.Message.Content != "" {
-			textMsg := &llm.AssistantMessage{Content: choice.Message.Content}
+			textMsg := llm.NewAssistantMessage(choice.Message.Content)
 			response.AddMessage(textMsg)
 		}
 
@@ -119,12 +119,15 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 
 	for _, msg := range messages {
 		switch m := msg.(type) {
-		case *llm.UserMessage:
-			openaiMessages = append(openaiMessages, openai.UserMessage(m.Content))
-		case *llm.AssistantMessage:
-			openaiMessages = append(openaiMessages, openai.AssistantMessage(m.Content))
-		case *llm.SystemMessage:
-			openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
+		case *llm.TextMessage:
+			switch m.Role() {
+			case llm.MessageRoleUser:
+				openaiMessages = append(openaiMessages, openai.UserMessage(m.Content))
+			case llm.MessageRoleAssistant:
+				openaiMessages = append(openaiMessages, openai.AssistantMessage(m.Content))
+			case llm.MessageRoleSystem:
+				openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
+			}
 
 		case *llm.ToolCallMessage:
 			// Convert tool call to assistant message with tool_calls

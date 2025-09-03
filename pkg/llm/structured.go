@@ -21,22 +21,30 @@ type BaseLLMWithStructuredOutput struct {
 	description string
 	inputSchema json.RawMessage
 	llm         LLM // The underlying LLM to delegate to
+
+	events LLMEvents
 }
 
 // LLMWithStructuredOutputOpts represents options for configuring an LLM with structured output
 type LLMWithStructuredOutputOpts = func(*BaseLLMWithStructuredOutput)
 
-// WithName sets a custom name for the tool (defaults to "formatter")
-func WithName(name string) LLMWithStructuredOutputOpts {
+// LLMWithStructuredOutputWithName sets a custom name for the tool (defaults to "formatter")
+func LLMWithStructuredOutputWithName(name string) LLMWithStructuredOutputOpts {
 	return func(f *BaseLLMWithStructuredOutput) {
 		f.name = name
 	}
 }
 
-// WithDescription sets a custom description for the tool
-func WithDescription(description string) LLMWithStructuredOutputOpts {
+// LLMWithStructuredOutputWithDescription sets a custom description for the tool
+func LLMWithStructuredOutputWithDescription(description string) LLMWithStructuredOutputOpts {
 	return func(f *BaseLLMWithStructuredOutput) {
 		f.description = description
+	}
+}
+
+func LLMWithStructuredOutputWithEvents(events LLMEvents) LLMWithStructuredOutputOpts {
+	return func(f *BaseLLMWithStructuredOutput) {
+		f.events = events
 	}
 }
 
@@ -48,6 +56,7 @@ func NewBaseLLMWithStructuredOutput(inputSchema json.RawMessage, llm LLM, opts .
 		description: "Must be called to provide structured output",
 		inputSchema: inputSchema,
 		llm:         llm,
+		events:      &NoopAgentEvents{},
 	}
 
 	for _, opt := range opts {
@@ -101,6 +110,8 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 		return nil, fmt.Errorf("no underlying LLM configured")
 	}
 
+	f.events.OnRequest(ctx, request)
+
 	// Create a new request that forces the use of this LLM with structured output
 	// We ignore any existing tool usage and tool configurations
 	forcedRequest := NewLLMRequest(
@@ -121,22 +132,26 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 		toolCall := toolCalls[0]
 		result, err := f.Run(ctx, toolCall.Args)
 		if err != nil {
+			f.events.OnToolError(ctx, toolCall, 0, err)
 			return nil, fmt.Errorf("LLM with structured output tool execution failed: %w", err)
 		}
 
 		content, err := json.Marshal(result)
 		if err != nil {
+			f.events.OnToolError(ctx, toolCall, 0, err)
 			return nil, fmt.Errorf("failed to marshal result: %w", err)
 		}
 
-		// Create a new response with the formatted result
-		return &LLMResponse{
+		response := &LLMResponse{
 			Messages: []Message{
-				&UserMessage{
-					Content: string(content),
-				},
+				NewUserMessage(string(content)),
 			},
-		}, nil
+		}
+
+		f.events.OnResponse(ctx, request, response)
+
+		// Create a new response with the formatted result
+		return response, nil
 	}
 
 	return nil, fmt.Errorf("no tool call found in response - LLM did not follow forced tool usage")

@@ -29,55 +29,38 @@ const (
 	MessageRoleTool      MessageRole = "tool"
 )
 
-// UserMessage represents a message from the user
-type UserMessage struct {
-	Content string
+type TextMessage struct {
+	Content string      `json:"content"`
+	Role_   MessageRole `json:"role"`
 }
 
-func NewUserMessage(content string) *UserMessage {
-	return &UserMessage{
+func (m *TextMessage) Kind() MessageKind {
+	return MessageKindText
+}
+
+func (m *TextMessage) Role() MessageRole {
+	return m.Role_
+}
+
+func NewUserMessage(content string) *TextMessage {
+	return &TextMessage{
 		Content: content,
+		Role_:   MessageRoleUser,
 	}
 }
 
-func (m *UserMessage) Kind() MessageKind {
-	return MessageKindText
-}
-
-func (m *UserMessage) Role() MessageRole {
-	return MessageRoleUser
-}
-
-// AssistantMessage represents a message from the assistant
-type AssistantMessage struct {
-	Content string
-}
-
-func (m *AssistantMessage) Kind() MessageKind {
-	return MessageKindText
-}
-
-func (m *AssistantMessage) Role() MessageRole {
-	return MessageRoleAssistant
-}
-
-// SystemMessage represents a system message
-type SystemMessage struct {
-	Content string
-}
-
-func NewSystemMessage(content string) *SystemMessage {
-	return &SystemMessage{
+func NewAssistantMessage(content string) *TextMessage {
+	return &TextMessage{
 		Content: content,
+		Role_:   MessageRoleAssistant,
 	}
 }
 
-func (m *SystemMessage) Kind() MessageKind {
-	return MessageKindText
-}
-
-func (m *SystemMessage) Role() MessageRole {
-	return MessageRoleSystem
+func NewSystemMessage(content string) *TextMessage {
+	return &TextMessage{
+		Content: content,
+		Role_:   MessageRoleSystem,
+	}
 }
 
 type ToolCallMessage struct {
@@ -100,8 +83,8 @@ func (m *ToolCallMessage) Role() MessageRole {
 
 // ToolResultMessage represents the result of a tool execution
 type ToolResultMessage struct {
-	ToolCall *ToolCall
-	Result   json.RawMessage
+	ToolCall *ToolCall       `json:"tool_call"`
+	Result   json.RawMessage `json:"result"`
 }
 
 func NewToolResultMessage(toolCall *ToolCall, result json.RawMessage) *ToolResultMessage {

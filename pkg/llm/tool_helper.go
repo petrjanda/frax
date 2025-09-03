@@ -11,9 +11,9 @@ import (
 // GenericTool is a generic tool implementation that handles JSON marshalling/unmarshalling
 // automatically for input type I and output type O
 type GenericTool[I, O any] struct {
-	name        string
-	description string
-	runner      func(ctx context.Context, input I) (O, error)
+	name        string                                        `json:"name"`
+	description string                                        `json:"description"`
+	runner      func(ctx context.Context, input I) (O, error) `json:"_"`
 }
 
 // NewGenericTool creates a new generic tool with the given name, description, and runner function

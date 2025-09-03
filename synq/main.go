@@ -42,6 +42,7 @@ func main() {
 
 	structuredLLM := llm.NewBaseLLMWithStructuredOutput(
 		directiveSchema, openaiLLM,
+		llm.LLMWithStructuredOutputWithEvents(llm.NewJSONFileLogAgentEvents("log.json")),
 	)
 
 	system := `
@@ -66,11 +67,11 @@ func main() {
 	`
 
 	queries := []string{
-		// "Monitor freshness of data of all dbt sources with P1 priority tag.",
+		"Monitor freshness of data of all dbt sources with P1 priority tag.",
 		// "Ensure fields used in join clauses are tested for uniqueness where appropriate.",
 		// "All sources upstream of P1 and P2 data products should have freshness and volume test.",
 		// "Tables impacting ML data products should test for data freshness and drift on feature columns.",
-		"Tables feeding into high priority Tableau dashboards should have business rules tests reflective of the most common queries.",
+		// "Tables feeding into high priority Tableau dashboards should have business rules tests reflective of the most common queries.",
 	}
 
 	for _, q := range queries {
@@ -99,7 +100,7 @@ func main() {
 		// Print the conversation
 		for _, msg := range response.Messages {
 			switch t := msg.(type) {
-			case *llm.UserMessage:
+			case *llm.TextMessage:
 
 				// fmt.Println(t.Content)
 				// fmt.Println("--------------------------------")

@@ -1,7 +1,7 @@
 package llm
 
 type LLMResponse struct {
-	Messages History
+	Messages History `json:"messages"`
 }
 
 func NewLLMResponse() *LLMResponse {
