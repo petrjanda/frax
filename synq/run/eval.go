@@ -11,7 +11,7 @@ import (
 	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/dsl"
 	"github.com/petrjanda/frax/synq/eval"
-	. "github.com/petrjanda/frax/synq/eval/json"
+	. "github.com/petrjanda/frax/synq/eval/expectations"
 	"github.com/petrjanda/frax/synq/prompts"
 
 	_ "embed"
