@@ -58,6 +58,7 @@ func (e *LogAgentEvents) OnRequest(ctx context.Context, request *LLMRequest) {
 func (e *LogAgentEvents) OnResponse(ctx context.Context, request *LLMRequest, response *LLMResponse) {
 	e.logger.Info("response",
 		"messages", response.Messages,
+		"usage", response.Usage,
 	)
 }
 

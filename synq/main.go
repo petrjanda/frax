@@ -119,9 +119,9 @@ func main() {
 				fmt.Println(string(payload))
 				fmt.Println("========================================")
 
-			// Other
 			default:
-				fmt.Println("Unhandled message of type '%T'", t)
+				// Quietly ignore other message types
+				continue
 			}
 
 		}

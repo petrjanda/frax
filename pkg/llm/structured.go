@@ -110,15 +110,15 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 		return nil, fmt.Errorf("no underlying LLM configured")
 	}
 
-	f.events.OnRequest(ctx, request)
-
 	// Create a new request that forces the use of this LLM with structured output
 	// We ignore any existing tool usage and tool configurations
-	forcedRequest := NewLLMRequest(
-		request.History,
+	forcedRequest := request.Clone(
 		WithTools(f),                       // Only include this LLM with structured output as a tool
 		WithToolUsage(ForceTool(f.Name())), // Force the use of this LLM with structured output
 	)
+
+	// Log actual internal request
+	f.events.OnRequest(ctx, forcedRequest)
 
 	// Delegate to the underlying LLM
 	response, err := f.llm.Invoke(ctx, forcedRequest)
@@ -142,12 +142,11 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 			return nil, fmt.Errorf("failed to marshal result: %w", err)
 		}
 
-		response := &LLMResponse{
-			Messages: []Message{
-				NewUserMessage(string(content)),
-			},
-		}
+		// Reset response so we don't expose internal `formatter` tool call details.
+		// response := NewLLMResponse()
 
+		response := response.Clone()
+		response.AddMessage(NewUserMessage(string(content)))
 		f.events.OnResponse(ctx, request, response)
 
 		// Create a new response with the formatted result
@@ -155,4 +154,13 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 	}
 
 	return nil, fmt.Errorf("no tool call found in response - LLM did not follow forced tool usage")
+}
+
+// MarshalJSON implements custom JSON marshaling for BaseLLMWithStructuredOutput
+// This ensures that when the struct is serialized to JSON, it reports the tool name
+func (f *BaseLLMWithStructuredOutput) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"name":        f.name,
+		"description": f.description,
+	})
 }

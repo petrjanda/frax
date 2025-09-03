@@ -25,7 +25,7 @@ func (a AutoToolUsage) Type() ToolUsageType {
 
 // ForcedToolUsage forces the use of a specific tool
 type ForcedToolUsage struct {
-	ToolName string
+	ToolName string `json:"tool_name"`
 }
 
 func (f ForcedToolUsage) Type() ToolUsageType {

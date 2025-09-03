@@ -64,7 +64,7 @@ func NewSystemMessage(content string) *TextMessage {
 }
 
 type ToolCallMessage struct {
-	ToolCall *ToolCall
+	ToolCall *ToolCall `json:"tool_call"`
 }
 
 func NewToolCallMessage(toolCall *ToolCall) *ToolCallMessage {
@@ -111,9 +111,9 @@ func (m *ToolResultMessage) Role() MessageRole {
 
 // ToolCall represents a call to a tool
 type ToolCall struct {
-	ID   string
-	Name string
-	Args json.RawMessage
+	ID   string          `json:"id"`
+	Name string          `json:"name"`
+	Args json.RawMessage `json:"args"`
 }
 
 // ToolErrorMessage represents an error that occurred during tool execution

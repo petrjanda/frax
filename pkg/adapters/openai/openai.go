@@ -77,13 +77,6 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		}
 	}
 
-	// Pretty print the chat request for debugging
-	// reqJSON, err := json.MarshalIndent(chatReq, "", "  ")
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to marshal chat request: %w", err)
-	// }
-	// fmt.Println(string(reqJSON))
-
 	resp, err := a.client.Chat.Completions.New(ctx, chatReq)
 	if err != nil {
 		return nil, fmt.Errorf("OpenAI API call failed: %w", err)
@@ -109,6 +102,12 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 			}
 		}
 	}
+
+	response.SetUsage(llm.NewLLMUsage(
+		resp.Usage.PromptTokens,
+		resp.Usage.CompletionTokens,
+		resp.Usage.TotalTokens,
+	))
 
 	return response, nil
 }
