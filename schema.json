@@ -3,27 +3,15 @@
   "$id": "https://github.com/petrjanda/frax/synq/dsl/directive",
   "properties": {
     "entities": {
-      "oneOf": [
-        {
-          "required": [
-            "llm"
-          ],
-          "title": "llm"
-        },
-        {
-          "required": [
-            "query"
-          ],
-          "title": "query"
-        }
-      ],
       "properties": {
-        "llm": {
-          "type": "string",
-          "description": "Prompt should only contain instructions to select entities. It should not specify what tests to deploy or columns to test."
-        },
         "query": {
           "anyOf": [
+            {
+              "required": [
+                "materialization"
+              ],
+              "title": "materialization"
+            },
             {
               "required": [
                 "entity_type"
@@ -71,14 +59,6 @@
                 "annotation"
               ],
               "title": "annotation"
-            }
-          ],
-          "oneOf": [
-            {
-              "required": [
-                "materialization"
-              ],
-              "title": "materialization"
             }
           ],
           "properties": {
@@ -170,11 +150,15 @@
             }
           },
           "type": "object",
-          "description": "Structured query selector. Operands are ANDed together."
+          "description": "Structured query selector. Operands are ANDed together.\nQuery *Operand `json:\"query,omitempty\" jsonschema:\"oneof_required=query\"`"
+        },
+        "llm": {
+          "type": "string",
+          "description": "Prompt should only contain instructions to select entities. It should not specify what tests to deploy or columns to test.\nLLM string `json:\"llm,omitempty\" jsonschema:\"oneof_required=llm\"`"
         }
       },
       "type": "object",
-      "description": "Defines which entities (typically tables) should be tested."
+      "description": "Defines which entities (typically tables) should be tested. Use either query or llm, not both."
     },
     "tests": {
       "anyOf": [

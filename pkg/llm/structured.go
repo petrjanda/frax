@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/xeipuuv/gojsonschema"
 )
 
 // LLMWithStructuredOutput implements the LLM interface to provide structured output formatting
@@ -88,12 +91,46 @@ func (f *BaseLLMWithStructuredOutput) InputSchemaRaw() json.RawMessage {
 
 // ValidateInput validates the input against the schema
 func (f *BaseLLMWithStructuredOutput) ValidateInput(input json.RawMessage) error {
-	// For now, just return nil - could add JSON schema validation here
+	// @todo: add json schema validation here
+
+	// Create a schema loader and compile the schema
+	schemaLoader := gojsonschema.NewBytesLoader(f.inputSchema)
+	schema, err := gojsonschema.NewSchema(schemaLoader)
+	if err != nil {
+		return fmt.Errorf("failed to compile schema: %w", err)
+	}
+
+	// Create a document loader for the input
+	documentLoader := gojsonschema.NewBytesLoader(input)
+
+	// Validate the input against the schema
+	result, err := schema.Validate(documentLoader)
+	if err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	if !result.Valid() {
+		// Collect all validation errors
+		var errMsgs []string
+		for _, err := range result.Errors() {
+			errMsgs = append(errMsgs, err.String())
+		}
+		return fmt.Errorf("validation errors: %s", strings.Join(errMsgs, "; "))
+	}
+
 	return nil
 }
 
 // Run executes the LLM with structured output tool, returning the input as output (echo behavior)
 func (f *BaseLLMWithStructuredOutput) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+
+	// prettyArgs, err := json.MarshalIndent(args, "", "  ")
+	// if err != nil {
+	// 	panic(fmt.Sprintf("failed to marshal args: %v", err))
+	// }
+	// log.Println(string(prettyArgs))
+	// panic(f.ValidateInput(args))
+
 	// Validate input first
 	if err := f.ValidateInput(args); err != nil {
 		return nil, fmt.Errorf("input validation failed: %w", err)
@@ -133,13 +170,13 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 		result, err := f.Run(ctx, toolCall.Args)
 		if err != nil {
 			f.events.OnToolError(ctx, toolCall, 0, err)
-			return nil, fmt.Errorf("LLM with structured output tool execution failed: %w", err)
+			return nil, fmt.Errorf("structured output generation failed: %w", err)
 		}
 
 		content, err := json.Marshal(result)
 		if err != nil {
 			f.events.OnToolError(ctx, toolCall, 0, err)
-			return nil, fmt.Errorf("failed to marshal result: %w", err)
+			return nil, fmt.Errorf("structured output marshalling failed: %w", err)
 		}
 
 		// Reset response so we don't expose internal `formatter` tool call details.

@@ -2,7 +2,7 @@ package dsl
 
 // Directive describes how tests should deploy
 type Directive struct {
-	// Defines which entities (typically tables) should be tested.
+	// Defines which entities (typically tables) should be tested. Use either query or llm, not both.
 	Entities *EntitiesDirective `json:"entities,omitempty" jsonschema:"required"`
 
 	// Which columns within the selected entities should be tested.
@@ -12,16 +12,18 @@ type Directive struct {
 }
 
 type EntitiesDirective struct {
-	// Prompt should only contain instructions to select entities. It should not specify what tests to deploy or columns to test.
-	LLM string `json:"llm,omitempty" jsonschema:"oneof_required=llm"`
-
 	// Structured query selector. Operands are ANDed together.
-	Query *Operand `json:"query,omitempty" jsonschema:"oneof_required=query"`
+	// Query *Operand `json:"query,omitempty" jsonschema:"oneof_required=query"`
+	Query *Operand `json:"query,omitempty"`
+
+	// Prompt should only contain instructions to select entities. It should not specify what tests to deploy or columns to test.
+	// LLM string `json:"llm,omitempty" jsonschema:"oneof_required=llm"`
+	LLM string `json:"llm,omitempty"`
 }
 
 type Operand struct {
 	// By how its materialized in the database (table, view, materialized_view)
-	Materialization string `json:"materialization,omitempty" jsonschema:"oneof_required=materialization"`
+	Materialization string `json:"materialization,omitempty" jsonschema:"anyof_required=materialization"`
 
 	// By its type (dbt_model, dbt_source, table, view, airflow_task, tableau_dashboard, etc.)
 	EntityType string `json:"entity_type,omitempty" jsonschema:"anyof_required=entity_type"`
