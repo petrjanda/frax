@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"encoding/json"
 	"fmt"
 
 	_ "embed"
@@ -9,7 +8,7 @@ import (
 
 type Case struct {
 	Input        string
-	Expectations []*Expectation
+	Expectations []Expectation
 	Alias        string
 }
 
@@ -19,10 +18,9 @@ type CaseResult struct {
 	Errors int
 }
 
-func NewCase(input string, expectations []*Expectation, opts ...CaseOption) *Case {
+func NewCase(input string, opts ...CaseOption) *Case {
 	c := &Case{
-		Input:        input,
-		Expectations: expectations,
+		Input: input,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -38,18 +36,28 @@ func WithAlias(alias string) CaseOption {
 	}
 }
 
-func (c *Case) Validate(actual json.RawMessage) *CaseResult {
-	errors := []error{}
+func (c *Case) Expect(expectation Expectation) *Case {
+	c.Expectations = append(c.Expectations, expectation)
+	return c
+}
 
+func (c *Case) String() string {
 	alias := c.Input
 	if c.Alias != "" {
 		alias = c.Alias
 	}
 
-	fmt.Printf("running '%s'\n", alias)
+	return alias
+}
+
+func (c *Case) Eval(actual string) *CaseResult {
+	errors := []error{}
+
+	fmt.Println("")
+	fmt.Println("expectations")
 
 	for _, expectation := range c.Expectations {
-		if err := expectation.Validate(actual); err != nil {
+		if err := expectation.Eval(actual); err != nil {
 			fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", err)
 			errors = append(errors, err)
 		} else {
@@ -58,6 +66,7 @@ func (c *Case) Validate(actual json.RawMessage) *CaseResult {
 	}
 
 	fmt.Printf("  = total=%d, ok=%d, error=%d\n", len(c.Expectations), len(c.Expectations)-len(errors), len(errors))
+	fmt.Println("")
 
 	return &CaseResult{
 		Total:  len(c.Expectations),

@@ -1,6 +1,7 @@
 package llm
 
 type LLMRequest struct {
+	Model     string    `json:"model"`
 	System    string    `json:"system"`
 	History   History   `json:"history"`
 	Tools     []Tool    `json:"tools"`
@@ -11,6 +12,12 @@ type LLMRequest struct {
 }
 
 type LLMRequestOpts = func(*LLMRequest)
+
+func WithModel(model string) LLMRequestOpts {
+	return func(r *LLMRequest) {
+		r.Model = model
+	}
+}
 
 func WithToolUsage(toolUsage ToolUsage) LLMRequestOpts {
 	return func(r *LLMRequest) {
@@ -66,6 +73,7 @@ func (r *LLMRequest) With(opt LLMRequestOpts) *LLMRequest {
 
 func (r *LLMRequest) Clone(opts ...LLMRequestOpts) *LLMRequest {
 	req := &LLMRequest{
+		Model:               r.Model,
 		History:             r.History,
 		ToolUsage:           r.ToolUsage,
 		Tools:               r.Tools,

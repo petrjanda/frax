@@ -5,8 +5,40 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/petrjanda/frax/pkg/adapters/openai/schemas"
+	"github.com/invopop/jsonschema"
 )
+
+type SchemaGenerator interface {
+	Generate(v interface{}) (*jsonschema.Schema, error)
+	MustGenerate(v interface{}) *jsonschema.Schema
+}
+
+type GenericSchemaGenerator struct {
+	reflector *jsonschema.Reflector
+}
+
+func NewGenericSchemaGenerator() *GenericSchemaGenerator {
+	return &GenericSchemaGenerator{
+		reflector: &jsonschema.Reflector{
+			ExpandedStruct:             true,
+			DoNotReference:             true,
+			RequiredFromJSONSchemaTags: true,
+			AllowAdditionalProperties:  true,
+		},
+	}
+}
+
+func (g *GenericSchemaGenerator) Generate(v interface{}) (*jsonschema.Schema, error) {
+	return g.reflector.Reflect(v), nil
+}
+
+func (g *GenericSchemaGenerator) MustGenerate(v interface{}) *jsonschema.Schema {
+	if schema, err := g.Generate(v); err != nil {
+		panic(err)
+	} else {
+		return schema
+	}
+}
 
 type Toolbox = []Tool
 
@@ -66,9 +98,8 @@ func (g *GenericTool[I, O]) Description() string {
 }
 
 // InputSchemaRaw returns the JSON schema for the tool's input type I
-func (g *GenericTool[I, O]) InputSchemaRaw() json.RawMessage {
-	generator := schemas.NewOpenAISchemaGenerator()
-	return generator.MustGenerateSchema((*I)(nil))
+func (g *GenericTool[I, O]) InputSchemaRaw(generator SchemaGenerator) *jsonschema.Schema {
+	return generator.MustGenerate((*I)(nil))
 }
 
 // Run executes the tool with the given arguments, automatically handling JSON marshalling/unmarshalling

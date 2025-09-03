@@ -8,26 +8,17 @@ import (
 	openai "github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
 	"github.com/openai/openai-go/v2/shared"
-
 	"github.com/petrjanda/frax/pkg/llm"
 )
 
 // OpenAIAdapter implements the LLM interface using OpenAI's API
 type OpenAIAdapter struct {
 	client   *openai.Client
-	model    string
 	endpoint string
 }
 
 // OpenAIAdapterOpts represents options for configuring the OpenAI adapter
 type OpenAIAdapterOpts = func(*OpenAIAdapter)
-
-// WithModel sets the model to use for the OpenAI adapter
-func WithModel(model string) OpenAIAdapterOpts {
-	return func(a *OpenAIAdapter) {
-		a.model = model
-	}
-}
 
 func WithEndpoint(endpoint string) OpenAIAdapterOpts {
 	return func(a *OpenAIAdapter) {
@@ -41,7 +32,6 @@ func NewOpenAIAdapter(apiKey string, opts ...OpenAIAdapterOpts) (*OpenAIAdapter,
 
 	adapter := &OpenAIAdapter{
 		client: &client,
-		model:  "gpt-4o", // default model
 	}
 
 	for _, opt := range opts {
@@ -56,7 +46,7 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 	history := append(llm.NewHistory(llm.NewSystemMessage(request.System)), request.History...)
 
 	chatReq := openai.ChatCompletionNewParams{
-		Model:    shared.ChatModel(a.model),
+		Model:    shared.ChatModel(request.Model),
 		Messages: a.convertMessages(history),
 	}
 

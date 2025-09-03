@@ -39,7 +39,7 @@ func TestGenericTool(t *testing.T) {
 	}
 
 	// Test schema generation
-	inputSchema := tool.InputSchemaRaw()
+	inputSchema := tool.InputSchemaRaw(NewGenericSchemaGenerator())
 	if inputSchema == nil {
 		t.Error("Input schema should not be nil")
 	}

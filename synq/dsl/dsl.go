@@ -5,9 +5,6 @@ type Directive struct {
 	// Defines which entities (typically tables) should be tested. Use either query or llm, not both.
 	Entities *EntitiesDirective `json:"entities,omitempty" jsonschema:"required"`
 
-	// Which columns within the selected entities should be tested.
-	// Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
-
 	// Add one or multiple tests to deploy.
 	Tests *Tests `json:"tests,omitempty" jsonschema:"required"`
 }

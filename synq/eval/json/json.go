@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/tidwall/gjson"
@@ -9,26 +8,20 @@ import (
 	_ "embed"
 )
 
-type Expectation interface {
-	Eval(actual string) error
-	String() string
-}
-
 type JSONExpectation struct {
 	Path     string
 	Expected Assertion
 }
 
-func ExpectJSON(path string, assertion Assertion) *JSONExpectation {
+func JSON(path string, assertion Assertion) *JSONExpectation {
 	return &JSONExpectation{
 		Path:     path,
 		Expected: assertion,
 	}
 }
 
-func (e *JSONExpectation) Eval(actual json.RawMessage) error {
-	value := gjson.Get(string(actual), e.Path)
-
+func (e *JSONExpectation) Eval(actual string) error {
+	value := gjson.Get(actual, e.Path)
 	err := e.Expected.Validate(value.Value())
 
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/adapters/openai"
-	"github.com/petrjanda/frax/pkg/adapters/openai/schemas"
+
 	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/dsl"
 
@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
-	directiveSchema := schemas.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
+	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
 
 	writeSchema(directiveSchema, "schema.json")
 
@@ -61,15 +61,16 @@ func main() {
 			llm.NewUserMessage(q),
 		)
 
-		// Run the agent
-		response, err := structuredLLM.Invoke(ctx,
-			llm.NewLLMRequest(
-				llm.WithHistory(history),
-				llm.WithSystem(system),
-				llm.WithTemperature(0.0),
-				llm.WithMaxCompletionTokens(1000),
-			),
+		req := llm.NewLLMRequest(
+			llm.WithModel(getModel()),
+			llm.WithSystem(system),
+			llm.WithHistory(history),
+			llm.WithTemperature(0.0),
+			llm.WithMaxCompletionTokens(1000),
 		)
+
+		// Run the agent
+		response, err := structuredLLM.Invoke(ctx, req)
 
 		if err != nil {
 			log.Fatalf("llm failed: %v", err)
@@ -103,16 +104,19 @@ func main() {
 	}
 }
 
+func getModel() string {
+	model := os.Getenv("OPENAI_MODEL")
+	if model == "" {
+		model = "o3-mini"
+	}
+	return model
+}
+
 func getAdapter() (llm.LLM, error) {
 	// Get OpenAI API key from environment
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("OPENAI_API_KEY environment variable is required")
-	}
-
-	model := os.Getenv("OPENAI_MODEL")
-	if model == "" {
-		model = "o3-mini"
 	}
 
 	endpoint := os.Getenv("OPENAI_ENDPOINT")
@@ -121,7 +125,7 @@ func getAdapter() (llm.LLM, error) {
 	}
 
 	// Create OpenAI adapter
-	openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel(model), openai.WithEndpoint(endpoint))
+	openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithEndpoint(endpoint))
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}

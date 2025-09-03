@@ -1,4 +1,4 @@
-package schemas
+package openai
 
 import (
 	"encoding/json"

@@ -55,3 +55,9 @@ func NewLLMUsage(promptTokens, completionTokens, totalTokens int64) *LLMUsage {
 		TotalTokens:      totalTokens,
 	}
 }
+
+func (u *LLMUsage) Add(other *LLMUsage) {
+	u.PromptTokens += other.PromptTokens
+	u.CompletionTokens += other.CompletionTokens
+	u.TotalTokens += other.TotalTokens
+}
