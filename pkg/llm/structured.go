@@ -160,7 +160,8 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 // This ensures that when the struct is serialized to JSON, it reports the tool name
 func (f *BaseLLMWithStructuredOutput) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"name":        f.name,
-		"description": f.description,
+		"name":         f.name,
+		"description":  f.description,
+		"input_schema": f.inputSchema,
 	})
 }
