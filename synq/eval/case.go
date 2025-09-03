@@ -4,11 +4,13 @@ import (
 	"context"
 
 	_ "embed"
+
+	"github.com/petrjanda/frax/synq/eval/expectations"
 )
 
 type Case struct {
 	Input        string
-	Expectations []Expectation
+	Expectations []expectations.Expectation
 	Alias        string
 }
 
@@ -36,7 +38,7 @@ func WithAlias(alias string) CaseOption {
 	}
 }
 
-func (c *Case) Expect(expectation Expectation) *Case {
+func (c *Case) Expect(expectation expectations.Expectation) *Case {
 	c.Expectations = append(c.Expectations, expectation)
 	return c
 }

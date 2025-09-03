@@ -53,8 +53,6 @@ func main() {
 			Expect(JSONPath("entities.query.entity_type").Eq("dbt_source")).
 			Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
 			Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
-			Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)).
-			Expect(JSONPath("tests.table_stats_monitor.change_delay").DoesNotExist()).
 			Expect(JSONPath("tests.table_stats_monitor.volume").DoesNotExist()).
 			Expect(JSONPath("tests.table_stats_monitor.change_delay").DoesNotExist()),
 

@@ -1,4 +1,4 @@
-package eval
+package expectations
 
 import (
 	"encoding/json"
@@ -8,11 +8,6 @@ import (
 
 	_ "embed"
 )
-
-type Expectation interface {
-	Eval(actual string) error
-	String() string
-}
 
 type JSONExpectation struct {
 	Path     string

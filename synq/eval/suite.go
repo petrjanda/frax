@@ -84,7 +84,8 @@ func (s *Suite) Run(ctx context.Context) error {
 
 		lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
 		if !ok {
-			fmt.Printf("last message is not a text message: %v", response.Messages[len(response.Messages)-1])
+			s.Total.FatalResult()
+			continue
 		}
 
 		result := q.Eval(ctx, s.events, lastMessage.Content)

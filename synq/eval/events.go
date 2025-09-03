@@ -2,22 +2,25 @@ package eval
 
 import (
 	"fmt"
+
+	"github.com/petrjanda/frax/synq/eval/expectations"
 )
 
 type SuiteEvents interface {
 	OnSuiteStart(suite *Suite)
 	OnSuiteEnd(suite *Suite)
+	OnSuiteError(error error)
+
 	OnCaseStart(case_ *Case)
 	OnCaseEnd(case_ *Case, errors []error)
 	OnCaseError(case_ *Case, error error)
-	OnExpectationStart(expectation Expectation)
-	OnExpectationEnd(expectation Expectation, err error)
-	OnExpectationError(expectation Expectation, error error)
-	OnSuiteError(error error)
+
+	OnExpectationStart(expectation expectations.Expectation)
+	OnExpectationEnd(expectation expectations.Expectation, err error)
+	OnExpectationError(expectation expectations.Expectation, error error)
 }
 
-type LoggingSuiteEvents struct {
-}
+type LoggingSuiteEvents struct{}
 
 func NewLoggingSuiteEvents() SuiteEvents {
 	return &LoggingSuiteEvents{}
@@ -42,6 +45,10 @@ func (e *LoggingSuiteEvents) OnSuiteEnd(s *Suite) {
 	)
 }
 
+func (e *LoggingSuiteEvents) OnSuiteError(error error) {
+	// @TODO
+}
+
 func (e *LoggingSuiteEvents) OnCaseStart(case_ *Case) {
 	fmt.Printf("case '%s'\n", case_)
 }
@@ -57,18 +64,14 @@ func (e *LoggingSuiteEvents) OnCaseError(case_ *Case, err error) {
 	fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnExpectationStart(expectation Expectation) {
+func (e *LoggingSuiteEvents) OnExpectationStart(expectation expectations.Expectation) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnExpectationEnd(expectation Expectation, err error) {
-	fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
+func (e *LoggingSuiteEvents) OnExpectationEnd(expectation expectations.Expectation, err error) {
+	// fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
 }
 
-func (e *LoggingSuiteEvents) OnExpectationError(expectation Expectation, err error) {
-	fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", expectation)
-}
-
-func (e *LoggingSuiteEvents) OnSuiteError(error error) {
-	// @TODO
+func (e *LoggingSuiteEvents) OnExpectationError(expectation expectations.Expectation, err error) {
+	// fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", expectation)
 }
