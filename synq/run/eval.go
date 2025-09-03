@@ -78,7 +78,8 @@ func main() {
 			}),
 	}
 
-	eval.RunSuite[dsl.Directive](ctx, cases, structuredLLM, req)
+	suite := eval.NewSuite[dsl.Directive](cases, structuredLLM, req)
+	suite.Run(ctx)
 }
 
 func getAdapter() (llm.LLM, error) {

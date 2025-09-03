@@ -13,6 +13,12 @@ type Case struct {
 	Alias        string
 }
 
+type CaseResult struct {
+	Total  int
+	Ok     int
+	Errors int
+}
+
 func NewCase(input string, expectations []*Expectation, opts ...CaseOption) *Case {
 	c := &Case{
 		Input:        input,
@@ -32,7 +38,7 @@ func WithAlias(alias string) CaseOption {
 	}
 }
 
-func (c *Case) Validate(actual json.RawMessage) []error {
+func (c *Case) Validate(actual json.RawMessage) *CaseResult {
 	errors := []error{}
 
 	alias := c.Input
@@ -53,5 +59,9 @@ func (c *Case) Validate(actual json.RawMessage) []error {
 
 	fmt.Printf("  = total=%d, ok=%d, error=%d\n", len(c.Expectations), len(c.Expectations)-len(errors), len(errors))
 
-	return errors
+	return &CaseResult{
+		Total:  len(c.Expectations),
+		Ok:     len(c.Expectations) - len(errors),
+		Errors: len(errors),
+	}
 }
