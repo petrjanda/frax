@@ -1,7 +1,7 @@
 package eval
 
 import (
-	"fmt"
+	"context"
 
 	_ "embed"
 )
@@ -50,23 +50,20 @@ func (c *Case) String() string {
 	return alias
 }
 
-func (c *Case) Eval(actual string) *CaseResult {
+func (c *Case) Eval(ctx context.Context, events SuiteEvents, actual string) *CaseResult {
 	errors := []error{}
-
-	fmt.Println("")
-	fmt.Println("expectations")
+	events.OnCaseStart(c)
 
 	for _, expectation := range c.Expectations {
 		if err := expectation.Eval(actual); err != nil {
-			fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", err)
+			events.OnExpectationError(expectation, err)
 			errors = append(errors, err)
 		} else {
-			fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
+			events.OnExpectationEnd(expectation, nil)
 		}
 	}
 
-	fmt.Printf("  = total=%d, ok=%d, error=%d\n", len(c.Expectations), len(c.Expectations)-len(errors), len(errors))
-	fmt.Println("")
+	events.OnCaseEnd(c, errors)
 
 	return &CaseResult{
 		Total:  len(c.Expectations),

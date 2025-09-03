@@ -28,7 +28,6 @@ func ExpectJSON(path string, assertion Assertion) *JSONExpectation {
 
 func (e *JSONExpectation) Eval(actual json.RawMessage) error {
 	value := gjson.Get(string(actual), e.Path)
-
 	err := e.Expected.Validate(value.Value())
 
 	if err != nil {

@@ -10,13 +10,15 @@ import (
 	_ "embed"
 )
 
-type Suite[T any] struct {
+type Suite struct {
 	Cases   []*Case
 	Model   llm.LLM
 	Request *llm.LLMRequest
 
 	Total *SuiteResult
 	Usage *llm.LLMUsage
+
+	events SuiteEvents
 }
 
 type SuiteResult struct {
@@ -43,40 +45,21 @@ func NewSuiteResult() *SuiteResult {
 	}
 }
 
-func (s *SuiteResult) Add(result *CaseResult) {
-	s.CasesTotal += 1
-
-	if result.Errors > 0 {
-		s.CasesErrors += 1
-	} else {
-		s.CasesOk += 1
-	}
-
-	s.ExpectationsTotal += result.Total
-	s.ExpectationsOk += result.Ok
-	s.ExpectationsErrors += result.Errors
-}
-
-func (s *SuiteResult) AddFatal() {
-	s.CasesFatal += 1
-}
-
-func NewSuite[T any](cases []*Case, model llm.LLM, req *llm.LLMRequest) *Suite[T] {
-	return &Suite[T]{
+func NewSuite(cases []*Case, model llm.LLM, req *llm.LLMRequest) *Suite {
+	return &Suite{
 		Cases:   cases,
 		Model:   model,
 		Request: req,
 
 		Total: NewSuiteResult(),
 		Usage: llm.NewLLMUsage(0, 0, 0),
+
+		events: NewLoggingSuiteEvents(),
 	}
 }
 
-func (s *Suite[T]) Run(ctx context.Context) error {
-
-	fmt.Printf("")
-	fmt.Printf("running suite with %d cases\n", len(s.Cases))
-	fmt.Println("")
+func (s *Suite) Run(ctx context.Context) error {
+	s.events.OnSuiteStart(s)
 
 	for _, q := range s.Cases {
 		// Create conversation history with the travel request
@@ -84,15 +67,13 @@ func (s *Suite[T]) Run(ctx context.Context) error {
 			llm.NewUserMessage(q.Input),
 		)
 
-		fmt.Printf("case %s\n", q)
-
 		// Run the agent
 		response, err := s.Model.Invoke(ctx,
 			s.Request.Clone(llm.WithHistory(history)),
 		)
 
 		if err != nil {
-			s.Total.AddFatal()
+			s.Total.FatalResult()
 
 			fmt.Printf("  - failed:\n    \033[31m%v\033[0m\n", err)
 			fmt.Println("")
@@ -106,11 +87,11 @@ func (s *Suite[T]) Run(ctx context.Context) error {
 			fmt.Printf("last message is not a text message: %v", response.Messages[len(response.Messages)-1])
 		}
 
-		result := q.Eval(lastMessage.Content)
-		s.Total.Add(result)
+		result := q.Eval(ctx, s.events, lastMessage.Content)
+		s.Total.Result(result)
 
 		if result.Errors > 0 {
-			var directive T
+			var directive map[string]any
 			if err = json.Unmarshal([]byte(lastMessage.Content), &directive); err != nil {
 				fmt.Printf("failed unmarshalling: %v", lastMessage.Content)
 			}
@@ -125,16 +106,25 @@ func (s *Suite[T]) Run(ctx context.Context) error {
 		}
 	}
 
-	fmt.Printf("--------------------------------\n")
-	fmt.Printf(" = total=%d, ok=%d, error=%d, fatal=%d | expectations total=%d, ok=%d, error=%d | score=%.1f\n",
-		s.Total.CasesTotal, s.Total.CasesOk, s.Total.CasesErrors, s.Total.CasesFatal,
-		s.Total.ExpectationsTotal, s.Total.ExpectationsOk, s.Total.ExpectationsErrors,
-		float64(s.Total.ExpectationsOk)/float64(s.Total.ExpectationsTotal)*100,
-	)
-
-	fmt.Printf(" ~ usage input=%d, output=%d, total=%d\n",
-		s.Usage.PromptTokens, s.Usage.CompletionTokens, s.Usage.TotalTokens,
-	)
+	s.events.OnSuiteEnd(s)
 
 	return nil
+}
+
+func (s *SuiteResult) Result(result *CaseResult) {
+	s.CasesTotal += 1
+
+	if result.Errors > 0 {
+		s.CasesErrors += 1
+	} else {
+		s.CasesOk += 1
+	}
+
+	s.ExpectationsTotal += result.Total
+	s.ExpectationsOk += result.Ok
+	s.ExpectationsErrors += result.Errors
+}
+
+func (s *SuiteResult) FatalResult() {
+	s.CasesFatal += 1
 }
