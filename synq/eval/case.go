@@ -6,6 +6,7 @@ import (
 	_ "embed"
 
 	"github.com/petrjanda/frax/pkg/llm"
+
 	"github.com/petrjanda/frax/synq/eval/expectations"
 )
 

@@ -7,6 +7,8 @@ import (
 
 	"github.com/petrjanda/frax/pkg/llm"
 
+	"github.com/petrjanda/frax/synq/eval/expectations"
+
 	_ "embed"
 )
 
@@ -19,6 +21,20 @@ type Suite struct {
 	Usage *llm.LLMUsage
 
 	events SuiteEvents
+}
+
+type SuiteEvents interface {
+	OnSuiteStart(suite *Suite)
+	OnSuiteEnd(suite *Suite)
+	OnSuiteError(error error)
+
+	OnCaseStart(variant *llm.LLMRequest, case_ *Case)
+	OnCaseEnd(variant *llm.LLMRequest, case_ *Case, errors []error)
+	OnCaseError(variant *llm.LLMRequest, case_ *Case, error error)
+
+	OnExpectationStart(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation)
+	OnExpectationEnd(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
+	OnExpectationError(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, error error)
 }
 
 type SuiteResult struct {
@@ -45,7 +61,7 @@ func NewSuiteResult() *SuiteResult {
 	}
 }
 
-func NewSuite(cases []*Case, model llm.LLM, req []*llm.LLMRequest) *Suite {
+func NewSuite(events SuiteEvents, cases []*Case, model llm.LLM, req []*llm.LLMRequest) *Suite {
 	return &Suite{
 		Cases:    cases,
 		Model:    model,
@@ -54,7 +70,7 @@ func NewSuite(cases []*Case, model llm.LLM, req []*llm.LLMRequest) *Suite {
 		Total: NewSuiteResult(),
 		Usage: llm.NewLLMUsage(0, 0, 0),
 
-		events: NewLoggingSuiteEvents(),
+		events: events,
 	}
 }
 

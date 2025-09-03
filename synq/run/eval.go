@@ -11,6 +11,7 @@ import (
 	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/dsl"
 	"github.com/petrjanda/frax/synq/eval"
+	"github.com/petrjanda/frax/synq/eval/events"
 	. "github.com/petrjanda/frax/synq/eval/expectations"
 	"github.com/petrjanda/frax/synq/prompts"
 
@@ -37,19 +38,22 @@ func main() {
 
 	// VARIANT
 
-	claude37 := llm.NewLLMRequest(
-		llm.WithModel("claude-3-7-sonnet"),
-		llm.WithSystem(prompts.PlannerSystem),
-		llm.WithTemperature(0.0),
-		llm.WithMaxCompletionTokens(1000),
-	)
+	variants := []*llm.LLMRequest{
 
-	claude4 := llm.NewLLMRequest(
-		llm.WithModel("claude-4-sonnet"),
-		llm.WithSystem(prompts.PlannerSystem),
-		llm.WithTemperature(0.0),
-		llm.WithMaxCompletionTokens(1000),
-	)
+		llm.NewLLMRequest(
+			llm.WithModel("claude-3-7-sonnet"),
+			llm.WithSystem(prompts.PlannerSystem),
+			llm.WithTemperature(0.0),
+			llm.WithMaxCompletionTokens(1000),
+		),
+
+		llm.NewLLMRequest(
+			llm.WithModel("claude-4-sonnet"),
+			llm.WithSystem(prompts.PlannerSystem),
+			llm.WithTemperature(0.0),
+			llm.WithMaxCompletionTokens(1000),
+		),
+	}
 
 	// CASES
 
@@ -91,7 +95,10 @@ func main() {
 			Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)),
 	}
 
-	suite := eval.NewSuite(cases, structuredLLM, []*llm.LLMRequest{claude37, claude4})
+	suite := eval.NewSuite(
+		events.NewLoggingSuiteEvents(), cases, structuredLLM, variants,
+	)
+
 	if err := suite.Run(ctx); err != nil {
 		log.Fatalf("Failed to run suite: %v", err)
 	}
