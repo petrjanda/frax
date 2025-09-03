@@ -8,6 +8,7 @@ type Directive struct {
 	// Which columns within the selected entities should be tested.
 	// Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
 
+	// Add one or multiple tests to deploy.
 	Tests *Tests `json:"tests,omitempty" jsonschema:"required"`
 }
 
@@ -58,11 +59,11 @@ type Operand struct {
 		Value string `json:"value,omitempty" jsonschema:"required"`
 	} `json:"annotation,omitempty" jsonschema:"anyof_required=annotation"`
 
-	// It will match all our operands and then expand selection to all nodes upstream via lineage.
-	ExpandUpstream bool `json:"expand_upstream,omitempty"`
+	// // It will match all our operands and then expand selection to all nodes upstream via lineage.
+	// ExpandUpstream bool `json:"expand_upstream,omitempty"`
 
-	// It will match all our operands and then expand selection to all nodes downstream via lineage.
-	ExpandDownstream bool `json:"expand_downstream,omitempty"`
+	// // It will match all our operands and then expand selection to all nodes downstream via lineage.
+	// ExpandDownstream bool `json:"expand_downstream,omitempty"`
 }
 
 type LLMEntitySelector struct {
