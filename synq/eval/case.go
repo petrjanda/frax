@@ -5,6 +5,7 @@ import (
 
 	_ "embed"
 
+	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/eval/expectations"
 )
 
@@ -12,12 +13,6 @@ type Case struct {
 	Input        string
 	Expectations []expectations.Expectation
 	Alias        string
-}
-
-type CaseResult struct {
-	Total  int
-	Ok     int
-	Errors int
 }
 
 func NewCase(input string, opts ...CaseOption) *Case {
@@ -52,20 +47,26 @@ func (c *Case) String() string {
 	return alias
 }
 
-func (c *Case) Eval(ctx context.Context, events SuiteEvents, actual string) *CaseResult {
+type CaseResult struct {
+	Total  int
+	Ok     int
+	Errors int
+}
+
+func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant *llm.LLMRequest, actual string) *CaseResult {
 	errors := []error{}
-	events.OnCaseStart(c)
+	events.OnCaseStart(variant, c)
 
 	for _, expectation := range c.Expectations {
 		if err := expectation.Eval(actual); err != nil {
-			events.OnExpectationError(expectation, err)
+			events.OnExpectationError(variant, c, expectation, err)
 			errors = append(errors, err)
 		} else {
-			events.OnExpectationEnd(expectation, nil)
+			events.OnExpectationEnd(variant, c, expectation, nil)
 		}
 	}
 
-	events.OnCaseEnd(c, errors)
+	events.OnCaseEnd(variant, c, errors)
 
 	return &CaseResult{
 		Total:  len(c.Expectations),

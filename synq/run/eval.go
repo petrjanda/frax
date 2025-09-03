@@ -37,8 +37,15 @@ func main() {
 
 	// VARIANT
 
-	req := llm.NewLLMRequest(
-		llm.WithModel(getModel()),
+	claude37 := llm.NewLLMRequest(
+		llm.WithModel("claude-3-7-sonnet"),
+		llm.WithSystem(prompts.PlannerSystem),
+		llm.WithTemperature(0.0),
+		llm.WithMaxCompletionTokens(1000),
+	)
+
+	claude4 := llm.NewLLMRequest(
+		llm.WithModel("claude-4-sonnet"),
 		llm.WithSystem(prompts.PlannerSystem),
 		llm.WithTemperature(0.0),
 		llm.WithMaxCompletionTokens(1000),
@@ -84,18 +91,10 @@ func main() {
 			Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)),
 	}
 
-	suite := eval.NewSuite(cases, structuredLLM, req)
+	suite := eval.NewSuite(cases, structuredLLM, []*llm.LLMRequest{claude37, claude4})
 	if err := suite.Run(ctx); err != nil {
 		log.Fatalf("Failed to run suite: %v", err)
 	}
-}
-
-func getModel() string {
-	model := os.Getenv("OPENAI_MODEL")
-	if model == "" {
-		model = "o3-mini"
-	}
-	return model
 }
 
 func getAdapter() (llm.LLM, error) {

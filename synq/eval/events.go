@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 
+	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/eval/expectations"
 )
 
@@ -11,13 +12,13 @@ type SuiteEvents interface {
 	OnSuiteEnd(suite *Suite)
 	OnSuiteError(error error)
 
-	OnCaseStart(case_ *Case)
-	OnCaseEnd(case_ *Case, errors []error)
-	OnCaseError(case_ *Case, error error)
+	OnCaseStart(variant *llm.LLMRequest, case_ *Case)
+	OnCaseEnd(variant *llm.LLMRequest, case_ *Case, errors []error)
+	OnCaseError(variant *llm.LLMRequest, case_ *Case, error error)
 
-	OnExpectationStart(expectation expectations.Expectation)
-	OnExpectationEnd(expectation expectations.Expectation, err error)
-	OnExpectationError(expectation expectations.Expectation, error error)
+	OnExpectationStart(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation)
+	OnExpectationEnd(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
+	OnExpectationError(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, error error)
 }
 
 type LoggingSuiteEvents struct{}
@@ -48,29 +49,29 @@ func (e *LoggingSuiteEvents) OnSuiteError(error error) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnCaseStart(case_ *Case) {
-	fmt.Printf("case '%s'\n", case_)
+func (e *LoggingSuiteEvents) OnCaseStart(variant *llm.LLMRequest, case_ *Case) {
+	fmt.Printf("%s | case '%s'\n", variant.Model, case_)
 }
 
-func (e *LoggingSuiteEvents) OnCaseEnd(case_ *Case, errors []error) {
-	fmt.Printf("  = total=%d, ok=%d, error=%d\n", len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
-	fmt.Println("")
+func (e *LoggingSuiteEvents) OnCaseEnd(variant *llm.LLMRequest, case_ *Case, errors []error) {
+	fmt.Printf("%s |  = total=%d, ok=%d, error=%d\n", variant.Model, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
+	// fmt.Println("")
 
 }
 
-func (e *LoggingSuiteEvents) OnCaseError(case_ *Case, err error) {
-	fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", err)
-	fmt.Println("")
+func (e *LoggingSuiteEvents) OnCaseError(variant *llm.LLMRequest, case_ *Case, err error) {
+	fmt.Printf("%s |  — %v ... [\033[31mERR\033[0m]\n", variant.Model, err)
+	// fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnExpectationStart(expectation expectations.Expectation) {
+func (e *LoggingSuiteEvents) OnExpectationStart(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnExpectationEnd(expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationEnd(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error) {
 	// fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
 }
 
-func (e *LoggingSuiteEvents) OnExpectationError(expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationError(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error) {
 	// fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", expectation)
 }

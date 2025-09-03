@@ -11,9 +11,9 @@ import (
 )
 
 type Suite struct {
-	Cases   []*Case
-	Model   llm.LLM
-	Request *llm.LLMRequest
+	Cases    []*Case
+	Model    llm.LLM
+	Variants []*llm.LLMRequest
 
 	Total *SuiteResult
 	Usage *llm.LLMUsage
@@ -45,11 +45,11 @@ func NewSuiteResult() *SuiteResult {
 	}
 }
 
-func NewSuite(cases []*Case, model llm.LLM, req *llm.LLMRequest) *Suite {
+func NewSuite(cases []*Case, model llm.LLM, req []*llm.LLMRequest) *Suite {
 	return &Suite{
-		Cases:   cases,
-		Model:   model,
-		Request: req,
+		Cases:    cases,
+		Model:    model,
+		Variants: req,
 
 		Total: NewSuiteResult(),
 		Usage: llm.NewLLMUsage(0, 0, 0),
@@ -60,49 +60,50 @@ func NewSuite(cases []*Case, model llm.LLM, req *llm.LLMRequest) *Suite {
 
 func (s *Suite) Run(ctx context.Context) error {
 	s.events.OnSuiteStart(s)
+	for _, variant := range s.Variants {
+		for _, q := range s.Cases {
+			// Create conversation history with the travel request
+			history := llm.NewHistory(
+				llm.NewUserMessage(q.Input),
+			)
 
-	for _, q := range s.Cases {
-		// Create conversation history with the travel request
-		history := llm.NewHistory(
-			llm.NewUserMessage(q.Input),
-		)
+			variant = variant.Clone(llm.WithHistory(history))
 
-		// Run the agent
-		response, err := s.Model.Invoke(ctx,
-			s.Request.Clone(llm.WithHistory(history)),
-		)
+			// Run the agent
+			response, err := s.Model.Invoke(ctx, variant)
 
-		if err != nil {
-			s.Total.FatalResult()
+			if err != nil {
+				s.Total.FatalResult()
 
-			fmt.Printf("  - failed:\n    \033[31m%v\033[0m\n", err)
-			fmt.Println("")
-			continue
-		}
-
-		s.Usage.Add(response.Usage)
-
-		lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
-		if !ok {
-			s.Total.FatalResult()
-			continue
-		}
-
-		result := q.Eval(ctx, s.events, lastMessage.Content)
-		s.Total.Result(result)
-
-		if result.Errors > 0 {
-			var directive map[string]any
-			if err = json.Unmarshal([]byte(lastMessage.Content), &directive); err != nil {
-				fmt.Printf("failed unmarshalling: %v", lastMessage.Content)
+				fmt.Printf("  - failed:\n    \033[31m%v\033[0m\n", err)
+				fmt.Println("")
+				continue
 			}
 
-			if payload, err := json.MarshalIndent(directive, "", "  "); err != nil {
-				fmt.Printf("failed marshalling: %v", err)
-			} else {
-				fmt.Println("actual output was ```")
-				fmt.Println(string(payload))
-				fmt.Println("```")
+			s.Usage.Add(response.Usage)
+
+			lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
+			if !ok {
+				s.Total.FatalResult()
+				continue
+			}
+
+			result := q.Eval(ctx, s.events, variant, lastMessage.Content)
+			s.Total.Result(result)
+
+			if result.Errors > 0 {
+				var directive map[string]any
+				if err = json.Unmarshal([]byte(lastMessage.Content), &directive); err != nil {
+					fmt.Printf("failed unmarshalling: %v", lastMessage.Content)
+				}
+
+				if payload, err := json.MarshalIndent(directive, "", "  "); err != nil {
+					fmt.Printf("failed marshalling: %v", err)
+				} else {
+					fmt.Println("actual output was ```")
+					fmt.Println(string(payload))
+					fmt.Println("```")
+				}
 			}
 		}
 	}
