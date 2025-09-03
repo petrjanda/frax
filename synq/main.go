@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/adapters/openai"
 	"github.com/petrjanda/frax/pkg/adapters/openai/schemas"
 	"github.com/petrjanda/frax/pkg/llm"
@@ -16,14 +17,29 @@ import (
 func main() {
 	ctx := context.Background()
 
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Error loading .env file: %v", err)
+	}
+
 	// Get OpenAI API key from environment
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		log.Fatal("OPENAI_API_KEY environment variable is required")
 	}
 
+	model := os.Getenv("OPENAI_MODEL")
+	if model == "" {
+		model = "o3-mini"
+	}
+
+	endpoint := os.Getenv("OPENAI_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "https://api.openai.com/v1"
+	}
+
 	// Create OpenAI adapter
-	openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel("o3-mini"))
+	openaiLLM, err := openai.NewOpenAIAdapter(apiKey, openai.WithModel(model), openai.WithEndpoint(endpoint))
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
@@ -67,8 +83,8 @@ func main() {
 	`
 
 	queries := []string{
-		"Monitor freshness of data of all dbt sources with P1 priority tag.",
-		// "Ensure fields used in join clauses are tested for uniqueness where appropriate.",
+		// "Monitor freshness of data of all dbt sources with P1 priority tag.",
+		"Ensure fields used in join clauses are tested for uniqueness where appropriate.",
 		// "All sources upstream of P1 and P2 data products should have freshness and volume test.",
 		// "Tables impacting ML data products should test for data freshness and drift on feature columns.",
 		// "Tables feeding into high priority Tableau dashboards should have business rules tests reflective of the most common queries.",

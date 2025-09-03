@@ -14,8 +14,9 @@ import (
 
 // OpenAIAdapter implements the LLM interface using OpenAI's API
 type OpenAIAdapter struct {
-	client *openai.Client
-	model  string
+	client   *openai.Client
+	model    string
+	endpoint string
 }
 
 // OpenAIAdapterOpts represents options for configuring the OpenAI adapter
@@ -25,6 +26,12 @@ type OpenAIAdapterOpts = func(*OpenAIAdapter)
 func WithModel(model string) OpenAIAdapterOpts {
 	return func(a *OpenAIAdapter) {
 		a.model = model
+	}
+}
+
+func WithEndpoint(endpoint string) OpenAIAdapterOpts {
+	return func(a *OpenAIAdapter) {
+		a.endpoint = endpoint
 	}
 }
 
@@ -77,7 +84,7 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		}
 	}
 
-	resp, err := a.client.Chat.Completions.New(ctx, chatReq)
+	resp, err := a.client.Chat.Completions.New(ctx, chatReq, option.WithBaseURL(a.endpoint))
 	if err != nil {
 		return nil, fmt.Errorf("OpenAI API call failed: %w", err)
 	}
