@@ -8,8 +8,8 @@ import (
 	openai "github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
 	"github.com/openai/openai-go/v2/shared"
-	"github.com/petrjanda/frax/pkg/llm"
-	"github.com/petrjanda/frax/pkg/llm/tools"
+	"github.com/petrjanda/frax/pkg/ai"
+	"github.com/petrjanda/frax/pkg/ai/tools"
 )
 
 // OpenAIAdapter implements the LLM interface using OpenAI's API
@@ -43,8 +43,8 @@ func NewOpenAIAdapter(apiKey string, opts ...OpenAIAdapterOpts) (*OpenAIAdapter,
 }
 
 // Invoke implements the LLM interface by calling OpenAI's API
-func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
-	history := append(llm.NewHistory(llm.NewSystemMessage(request.System)), request.History...)
+func (a *OpenAIAdapter) Invoke(ctx context.Context, request *ai.LLMRequest) (*ai.LLMResponse, error) {
+	history := append(ai.NewHistory(ai.NewSystemMessage(request.System)), request.History...)
 
 	chatReq := openai.ChatCompletionNewParams{
 		Model:    shared.ChatModel(request.Model),
@@ -80,18 +80,18 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		return nil, fmt.Errorf("OpenAI API call failed: %w", err)
 	}
 
-	response := llm.NewLLMResponse()
+	response := ai.NewLLMResponse()
 
 	if len(resp.Choices) > 0 {
 		choice := resp.Choices[0]
 		if choice.Message.Content != "" {
-			textMsg := llm.NewAssistantMessage(choice.Message.Content)
+			textMsg := ai.NewAssistantMessage(choice.Message.Content)
 			response.AddMessage(textMsg)
 		}
 
 		if choice.Message.ToolCalls != nil {
 			for _, toolCall := range choice.Message.ToolCalls {
-				ourToolCall := &llm.ToolCall{
+				ourToolCall := &ai.ToolCall{
 					ID:   toolCall.ID,
 					Name: toolCall.Function.Name,
 					Args: json.RawMessage(toolCall.Function.Arguments),
@@ -101,7 +101,7 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 		}
 	}
 
-	response.SetUsage(llm.NewLLMUsage(
+	response.SetUsage(ai.NewLLMUsage(
 		resp.Usage.PromptTokens,
 		resp.Usage.CompletionTokens,
 		resp.Usage.TotalTokens,
@@ -111,22 +111,22 @@ func (a *OpenAIAdapter) Invoke(ctx context.Context, request *llm.LLMRequest) (*l
 }
 
 // convertMessages converts our Message interface to OpenAI's format
-func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCompletionMessageParamUnion {
+func (a *OpenAIAdapter) convertMessages(messages []ai.Message) []openai.ChatCompletionMessageParamUnion {
 	var openaiMessages []openai.ChatCompletionMessageParamUnion
 
 	for _, msg := range messages {
 		switch m := msg.(type) {
-		case *llm.TextMessage:
+		case *ai.TextMessage:
 			switch m.Role() {
-			case llm.MessageRoleUser:
+			case ai.MessageRoleUser:
 				openaiMessages = append(openaiMessages, openai.UserMessage(m.Content))
-			case llm.MessageRoleAssistant:
+			case ai.MessageRoleAssistant:
 				openaiMessages = append(openaiMessages, openai.AssistantMessage(m.Content))
-			case llm.MessageRoleSystem:
+			case ai.MessageRoleSystem:
 				openaiMessages = append(openaiMessages, openai.SystemMessage(m.Content))
 			}
 
-		case *llm.ToolCallMessage:
+		case *ai.ToolCallMessage:
 			// Convert tool call to assistant message with tool_calls
 			asst := openai.ChatCompletionAssistantMessageParam{
 				Role: "assistant",
@@ -145,11 +145,11 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 			}
 			openaiMessages = append(openaiMessages, openai.ChatCompletionMessageParamUnion{OfAssistant: &asst})
 
-		case *llm.ToolResultMessage:
+		case *ai.ToolResultMessage:
 			// Convert tool result to tool message
 			openaiMessages = append(openaiMessages, openai.ToolMessage(string(m.Result), m.ToolCall.ID))
 
-		case *llm.ToolErrorMessage:
+		case *ai.ToolErrorMessage:
 			// Don't send tool error messages directly to OpenAI
 			// Instead, we'll handle retries differently to avoid API violations
 			// This case should not occur in normal operation with the new retry mechanism

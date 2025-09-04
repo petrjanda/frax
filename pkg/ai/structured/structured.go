@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/petrjanda/frax/pkg/llm"
-	"github.com/petrjanda/frax/pkg/llm/tools"
+	"github.com/petrjanda/frax/pkg/ai"
+	"github.com/petrjanda/frax/pkg/ai/tools"
+
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -15,7 +16,7 @@ import (
 // It ignores tool call directives and forces the use of its own formatting tool
 type StructuredLLM interface {
 	tools.Tool
-	llm.LLM
+	ai.LLM
 	FormatName() string
 	ValidateInput(input json.RawMessage) error
 }
@@ -25,9 +26,9 @@ type LLM struct {
 	name        string
 	description string
 	inputSchema json.RawMessage
-	llm         llm.LLM // The underlying LLM to delegate to
+	llm         ai.LLM // The underlying LLM to delegate to
 
-	events llm.LLMEvents
+	events ai.LLMEvents
 }
 
 // LLMOpts represents options for configuring an LLM with structured output
@@ -47,7 +48,7 @@ func WithDescription(description string) LLMOpts {
 	}
 }
 
-func WithEvents(events llm.LLMEvents) LLMOpts {
+func WithEvents(events ai.LLMEvents) LLMOpts {
 	return func(f *LLM) {
 		f.events = events
 	}
@@ -55,13 +56,13 @@ func WithEvents(events llm.LLMEvents) LLMOpts {
 
 // NewLLM creates a new base LLM with structured output
 // Uses sensible defaults: name="formatter", description="Must be called to provide structured output"
-func NewLLM(inputSchema json.RawMessage, llm_ llm.LLM, opts ...LLMOpts) StructuredLLM {
+func NewLLM(inputSchema json.RawMessage, llm_ ai.LLM, opts ...LLMOpts) StructuredLLM {
 	f := &LLM{
 		name:        "formatter",
 		description: "Must be called to provide structured output",
 		inputSchema: inputSchema,
 		llm:         llm_,
-		events:      llm.NewNoopAgentEvents(),
+		events:      ai.NewNoopAgentEvents(),
 	}
 
 	for _, opt := range opts {
@@ -144,7 +145,7 @@ func (f *LLM) Execute(ctx context.Context, args json.RawMessage) (json.RawMessag
 
 // Invoke implements the LLM interface
 // It ignores tool call directives and forces the use of this LLM with structured output
-func (f *LLM) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
+func (f *LLM) Invoke(ctx context.Context, request *ai.LLMRequest) (*ai.LLMResponse, error) {
 	if f.llm == nil {
 		return nil, fmt.Errorf("no underlying LLM configured")
 	}
@@ -152,8 +153,8 @@ func (f *LLM) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResp
 	// Create a new request that forces the use of this LLM with structured output
 	// We ignore any existing tool usage and tool configurations
 	forcedRequest := request.Clone(
-		llm.WithTools(f), // Only include this LLM with structured output as a tool
-		llm.WithToolUsage(tools.ForceTool(f.Name())), // Force the use of this LLM with structured output
+		ai.WithTools(f), // Only include this LLM with structured output as a tool
+		ai.WithToolUsage(tools.ForceTool(f.Name())), // Force the use of this LLM with structured output
 	)
 
 	// Log actual internal request
@@ -185,7 +186,7 @@ func (f *LLM) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResp
 		// response := NewLLMResponse()
 
 		response := response.Clone()
-		response.AddMessage(llm.NewUserMessage(string(content)))
+		response.AddMessage(ai.NewUserMessage(string(content)))
 		f.events.OnResponse(ctx, request, response)
 
 		// Create a new response with the formatted result

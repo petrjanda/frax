@@ -1,4 +1,4 @@
-package llm
+package ai
 
 type History []Message
 

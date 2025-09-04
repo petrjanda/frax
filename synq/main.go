@@ -8,10 +8,10 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/petrjanda/frax/pkg/adapters/openai"
-	"github.com/petrjanda/frax/pkg/llm/structured"
+	"github.com/petrjanda/frax/pkg/ai"
+	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
+	"github.com/petrjanda/frax/pkg/ai/structured"
 
-	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/dsl"
 
 	_ "embed"
@@ -36,9 +36,9 @@ func main() {
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
 	writeSchema(directiveSchema, "schema.json")
 
-	structuredLLM := structured.NewLLM(
+	structured := structured.NewLLM(
 		directiveSchema, openaiLLM,
-		structured.WithEvents(llm.NewJSONFileLogAgentEvents("log.json")),
+		structured.WithEvents(ai.NewJSONFileLogAgentEvents("log.json")),
 	)
 
 	system := PromptPlannerSystem
@@ -57,20 +57,20 @@ func main() {
 		fmt.Println("--------------------------------")
 
 		// Create conversation history with the travel request
-		history := llm.NewHistory(
-			llm.NewUserMessage(q),
+		history := ai.NewHistory(
+			ai.NewUserMessage(q),
 		)
 
-		req := llm.NewLLMRequest(
-			llm.WithModel(getModel()),
-			llm.WithSystem(system),
-			llm.WithHistory(history),
-			llm.WithTemperature(0.0),
-			llm.WithMaxCompletionTokens(1000),
+		req := ai.NewLLMRequest(
+			ai.WithModel(getModel()),
+			ai.WithSystem(system),
+			ai.WithHistory(history),
+			ai.WithTemperature(0.0),
+			ai.WithMaxCompletionTokens(1000),
 		)
 
 		// Run the agent
-		response, err := structuredLLM.Invoke(ctx, req)
+		response, err := structured.Invoke(ctx, req)
 
 		if err != nil {
 			log.Fatalf("llm failed: %v", err)
@@ -79,7 +79,7 @@ func main() {
 		// Print the conversation
 		for _, msg := range response.Messages {
 			switch t := msg.(type) {
-			case *llm.TextMessage:
+			case *ai.TextMessage:
 				var directive dsl.Directive
 				err := json.Unmarshal([]byte(t.Content), &directive)
 				if err != nil {
@@ -104,15 +104,15 @@ func main() {
 	}
 }
 
-func getModel() llm.ModelId {
+func getModel() ai.ModelId {
 	model := os.Getenv("OPENAI_MODEL")
 	if model == "" {
 		model = "o3-mini"
 	}
-	return llm.ModelId(model)
+	return ai.ModelId(model)
 }
 
-func getAdapter() (llm.LLM, error) {
+func getAdapter() (ai.LLM, error) {
 	// Get OpenAI API key from environment
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {

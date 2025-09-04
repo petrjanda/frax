@@ -1,6 +1,6 @@
-package llm
+package ai
 
-import "github.com/petrjanda/frax/pkg/llm/tools"
+import "github.com/petrjanda/frax/pkg/ai/tools"
 
 type LLMRequest struct {
 	Model     ModelId         `json:"model"`

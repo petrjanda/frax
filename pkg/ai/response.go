@@ -1,4 +1,4 @@
-package llm
+package ai
 
 type LLMResponse struct {
 	Messages History   `json:"messages"`

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/petrjanda/frax/pkg/llm/tools"
+	"github.com/petrjanda/frax/pkg/ai/tools"
 )
 
 // mockTool is a simple mock implementation for testing

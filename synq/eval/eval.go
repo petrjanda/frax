@@ -6,13 +6,14 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/petrjanda/frax/pkg/adapters/openai"
-	"github.com/petrjanda/frax/pkg/llm/structured"
+	"github.com/petrjanda/frax/pkg/ai"
+	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
+	"github.com/petrjanda/frax/pkg/ai/structured"
 
 	"github.com/petrjanda/frax/pkg/eval"
 	"github.com/petrjanda/frax/pkg/eval/events"
 	. "github.com/petrjanda/frax/pkg/eval/expectations"
-	"github.com/petrjanda/frax/pkg/llm"
+
 	"github.com/petrjanda/frax/synq/dsl"
 	"github.com/petrjanda/frax/synq/prompts"
 
@@ -39,26 +40,26 @@ func main() {
 
 	// VARIANT
 
-	variants := []*llm.LLMRequest{
-		// llm.NewLLMRequest(
-		// 	llm.WithModel("claude-3-7-sonnet"),
-		// 	llm.WithSystem(prompts.PlannerSystem),
-		// 	llm.WithTemperature(0.0),
-		// 	llm.WithMaxCompletionTokens(1000),
+	variants := []*ai.LLMRequest{
+		// ai.NewLLMRequest(
+		// 	ai.WithModel("claude-3-7-sonnet"),
+		// 	ai.WithSystem(prompts.PlannerSystem),
+		// 	ai.WithTemperature(0.0),
+		// 	ai.WithMaxCompletionTokens(1000),
 		// ),
 
-		llm.NewLLMRequest(
-			llm.WithModel("claude-4-sonnet"),
-			llm.WithSystem(prompts.PlannerSystem),
-			llm.WithTemperature(0.0),
-			llm.WithMaxCompletionTokens(1000),
+		ai.NewLLMRequest(
+			ai.WithModel("claude-4-sonnet"),
+			ai.WithSystem(prompts.PlannerSystem),
+			ai.WithTemperature(0.0),
+			ai.WithMaxCompletionTokens(1000),
 		),
 
-		// llm.NewLLMRequest(
-		// 	llm.WithModel("claude-3-5-haiku"),
-		// 	llm.WithSystem(prompts.PlannerSystem),
-		// 	llm.WithTemperature(0.0),
-		// 	llm.WithMaxCompletionTokens(1000),
+		// ai.NewLLMRequest(
+		// 	ai.WithModel("claude-3-5-haiku"),
+		// 	ai.WithSystem(prompts.PlannerSystem),
+		// 	ai.WithTemperature(0.0),
+		// 	ai.WithMaxCompletionTokens(1000),
 		// ),
 	}
 
@@ -109,7 +110,7 @@ func main() {
 	}
 }
 
-func getAdapter() (llm.LLM, error) {
+func getAdapter() (ai.LLM, error) {
 	// Get OpenAI API key from environment
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {

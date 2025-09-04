@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/eval"
 	"github.com/petrjanda/frax/pkg/eval/expectations"
-	"github.com/petrjanda/frax/pkg/llm"
 )
 
 func TestTableSuiteEvents(t *testing.T) {
@@ -20,9 +20,9 @@ func TestTableSuiteEvents(t *testing.T) {
 	}
 
 	// Create mock variants
-	variants := []*llm.LLMRequest{
-		llm.NewLLMRequest(llm.WithModel("gpt-3.5-turbo"), llm.WithSystem("Test prompt")),
-		llm.NewLLMRequest(llm.WithModel("gpt-4"), llm.WithSystem("Test prompt")),
+	variants := []*ai.LLMRequest{
+		ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")),
+		ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")),
 	}
 
 	// Create table events

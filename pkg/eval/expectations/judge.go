@@ -5,21 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/petrjanda/frax/pkg/adapters/openai"
-	"github.com/petrjanda/frax/pkg/llm"
-	"github.com/petrjanda/frax/pkg/llm/structured"
+	"github.com/petrjanda/frax/pkg/ai"
+	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
+	"github.com/petrjanda/frax/pkg/ai/structured"
 )
 
 type JudgeExpectation struct {
 	Name        string
 	Instruction string
-	Model       llm.ModelId
-	llm         llm.LLM
+	Model       ai.ModelId
+	llm         ai.LLM
 
-	judgement func(ctx context.Context, response *llm.TextMessage) error
+	judgement func(ctx context.Context, response *ai.TextMessage) error
 }
 
-func NewJudge[T any](name string, parent llm.LLM, model llm.ModelId, instruction string, judgement func(ctx context.Context, response *llm.TextMessage) error) *JudgeExpectation {
+func NewJudge[T any](name string, parent ai.LLM, model ai.ModelId, instruction string, judgement func(ctx context.Context, response *ai.TextMessage) error) *JudgeExpectation {
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema((*T)(nil))
 
 	return &JudgeExpectation{
@@ -34,12 +34,12 @@ func NewJudge[T any](name string, parent llm.LLM, model llm.ModelId, instruction
 }
 
 func (e *JudgeExpectation) Eval(ctx context.Context, actual string) error {
-	req := llm.NewLLMRequest(
-		llm.WithModel(e.Model),
-		llm.WithSystem(e.Instruction),
-		llm.WithHistory(llm.NewHistory(llm.NewUserMessage(actual))),
-		llm.WithTemperature(0.0),
-		llm.WithMaxCompletionTokens(1000),
+	req := ai.NewLLMRequest(
+		ai.WithModel(e.Model),
+		ai.WithSystem(e.Instruction),
+		ai.WithHistory(ai.NewHistory(ai.NewUserMessage(actual))),
+		ai.WithTemperature(0.0),
+		ai.WithMaxCompletionTokens(1000),
 	)
 
 	response, err := e.llm.Invoke(ctx, req)
@@ -51,7 +51,7 @@ func (e *JudgeExpectation) Eval(ctx context.Context, actual string) error {
 		return fmt.Errorf("no response from judge")
 	}
 
-	lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
+	lastMessage, ok := response.Messages[len(response.Messages)-1].(*ai.TextMessage)
 	if !ok {
 		return fmt.Errorf("no text message in response from judge")
 	}
@@ -81,8 +81,8 @@ type ScoringJudgeVerdict struct {
 	Reason string `json:"reason" jsonschema:"required"`
 }
 
-func NewScoringJudge(name string, parent llm.LLM, model llm.ModelId, instruction string, threshold int) *ScoringJudgeExpectation {
-	judgement := func(ctx context.Context, response *llm.TextMessage) error {
+func NewScoringJudge(name string, parent ai.LLM, model ai.ModelId, instruction string, threshold int) *ScoringJudgeExpectation {
+	judgement := func(ctx context.Context, response *ai.TextMessage) error {
 		var verdict ScoringJudgeVerdict
 		if err := json.Unmarshal([]byte(response.Content), &verdict); err != nil {
 			return err

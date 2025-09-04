@@ -3,8 +3,7 @@ package eval
 import (
 	"context"
 
-	"github.com/petrjanda/frax/pkg/llm"
-
+	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/eval/expectations"
 
 	_ "embed"
@@ -12,10 +11,10 @@ import (
 
 type Suite struct {
 	Cases    []*Case
-	Model    llm.LLM
-	Variants []*llm.LLMRequest
+	Model    ai.LLM
+	Variants []*ai.LLMRequest
 
-	Usage *llm.LLMUsage
+	Usage *ai.LLMUsage
 
 	events SuiteEvents
 }
@@ -25,13 +24,13 @@ type SuiteEvents interface {
 	OnSuiteEnd(suite *Suite)
 	OnSuiteError(error error)
 
-	OnCaseStart(variant *llm.LLMRequest, case_ *Case)
-	OnCaseEnd(variant *llm.LLMRequest, case_ *Case, errors []error)
-	OnCaseError(variant *llm.LLMRequest, case_ *Case, error error)
+	OnCaseStart(variant *ai.LLMRequest, case_ *Case)
+	OnCaseEnd(variant *ai.LLMRequest, case_ *Case, errors []error)
+	OnCaseError(variant *ai.LLMRequest, case_ *Case, error error)
 
-	OnExpectationStart(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation)
-	OnExpectationEnd(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
-	OnExpectationError(variant *llm.LLMRequest, case_ *Case, actual string, expectation expectations.Expectation, error error)
+	OnExpectationStart(variant *ai.LLMRequest, case_ *Case, expectation expectations.Expectation)
+	OnExpectationEnd(variant *ai.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
+	OnExpectationError(variant *ai.LLMRequest, case_ *Case, actual string, expectation expectations.Expectation, error error)
 }
 
 type SuiteResult struct {
@@ -58,13 +57,13 @@ func NewSuiteResult() *SuiteResult {
 	}
 }
 
-func NewSuite(events SuiteEvents, cases []*Case, model llm.LLM, req []*llm.LLMRequest) *Suite {
+func NewSuite(events SuiteEvents, cases []*Case, model ai.LLM, req []*ai.LLMRequest) *Suite {
 	return &Suite{
 		Cases:    cases,
 		Model:    model,
 		Variants: req,
 
-		Usage: llm.NewLLMUsage(0, 0, 0),
+		Usage: ai.NewLLMUsage(0, 0, 0),
 
 		events: events,
 	}
@@ -75,11 +74,11 @@ func (s *Suite) Run(ctx context.Context) error {
 	for _, variant := range s.Variants {
 		for _, q := range s.Cases {
 			// Create conversation history with the travel request
-			history := llm.NewHistory(
-				llm.NewUserMessage(q.Input),
+			history := ai.NewHistory(
+				ai.NewUserMessage(q.Input),
 			)
 
-			variant = variant.Clone(llm.WithHistory(history))
+			variant = variant.Clone(ai.WithHistory(history))
 
 			s.events.OnCaseStart(variant, q)
 
@@ -93,7 +92,7 @@ func (s *Suite) Run(ctx context.Context) error {
 
 			s.Usage.Add(response.Usage)
 
-			lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
+			lastMessage, ok := response.Messages[len(response.Messages)-1].(*ai.TextMessage)
 			if !ok {
 				continue
 			}

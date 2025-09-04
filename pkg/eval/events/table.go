@@ -6,8 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/petrjanda/frax/pkg/llm"
-
+	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/eval"
 	"github.com/petrjanda/frax/pkg/eval/expectations"
 )
@@ -32,20 +31,20 @@ type TestResult struct {
 
 // VariantResult tracks all test results for a single variant
 type VariantResult struct {
-	Variant *llm.LLMRequest
+	Variant *ai.LLMRequest
 	Results map[string]*TestResult // key: caseAlias + "|" + expectationString
 	Summary *eval.SuiteResult
 }
 
 // TableSuiteEvents creates a table showing test results across variants
 type TableSuiteEvents struct {
-	variants map[llm.ModelId]*VariantResult // key: variant.Model
+	variants map[ai.ModelId]*VariantResult // key: variant.Model
 	cases    []*eval.Case
 }
 
 func NewTableSuiteEvents() eval.SuiteEvents {
 	return &TableSuiteEvents{
-		variants: make(map[llm.ModelId]*VariantResult),
+		variants: make(map[ai.ModelId]*VariantResult),
 		cases:    make([]*eval.Case, 0),
 	}
 }
@@ -72,13 +71,13 @@ func (e *TableSuiteEvents) OnSuiteError(error error) {
 	// Handle suite-level errors if needed
 }
 
-func (e *TableSuiteEvents) OnCaseStart(variant *llm.LLMRequest, case_ *eval.Case) {
+func (e *TableSuiteEvents) OnCaseStart(variant *ai.LLMRequest, case_ *eval.Case) {
 	// No action needed for case start
 
 	fmt.Printf("%s | case '%s' ...", variant.Model, case_)
 }
 
-func (e *TableSuiteEvents) OnCaseEnd(variant *llm.LLMRequest, case_ *eval.Case, errors []error) {
+func (e *TableSuiteEvents) OnCaseEnd(variant *ai.LLMRequest, case_ *eval.Case, errors []error) {
 	fmt.Printf("  = [\033[32mOK\033[0m] total=%d, ok=%d, error=%d\n", len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
 
 	variantResult := e.variants[variant.Model]
@@ -95,7 +94,7 @@ func (e *TableSuiteEvents) OnCaseEnd(variant *llm.LLMRequest, case_ *eval.Case, 
 	variantResult.Summary.Result(result)
 }
 
-func (e *TableSuiteEvents) OnCaseError(variant *llm.LLMRequest, case_ *eval.Case, err error) {
+func (e *TableSuiteEvents) OnCaseError(variant *ai.LLMRequest, case_ *eval.Case, err error) {
 	fmt.Printf("  = [\033[31mERR\033[0m] %v\n", err)
 
 	variantResult := e.variants[variant.Model]
@@ -118,11 +117,11 @@ func (e *TableSuiteEvents) OnCaseError(variant *llm.LLMRequest, case_ *eval.Case
 	variantResult.Summary.FatalResult()
 }
 
-func (e *TableSuiteEvents) OnExpectationStart(variant *llm.LLMRequest, case_ *eval.Case, expectation expectations.Expectation) {
+func (e *TableSuiteEvents) OnExpectationStart(variant *ai.LLMRequest, case_ *eval.Case, expectation expectations.Expectation) {
 	fmt.Printf("%s | expectation '%s' ", variant.Model, expectation.String())
 }
 
-func (e *TableSuiteEvents) OnExpectationEnd(variant *llm.LLMRequest, case_ *eval.Case, expectation expectations.Expectation, err error) {
+func (e *TableSuiteEvents) OnExpectationEnd(variant *ai.LLMRequest, case_ *eval.Case, expectation expectations.Expectation, err error) {
 	fmt.Printf("[\033[32mOK\033[0m]\n")
 
 	variantResult := e.variants[variant.Model]
@@ -139,7 +138,7 @@ func (e *TableSuiteEvents) OnExpectationEnd(variant *llm.LLMRequest, case_ *eval
 	}
 }
 
-func (e *TableSuiteEvents) OnExpectationError(variant *llm.LLMRequest, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
+func (e *TableSuiteEvents) OnExpectationError(variant *ai.LLMRequest, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
 	fmt.Printf("[\033[31mERR\033[0m] %v\n", err)
 
 	variantResult := e.variants[variant.Model]
@@ -238,7 +237,7 @@ func (e *TableSuiteEvents) printSummary() {
 	}
 }
 
-func (e *TableSuiteEvents) printUsage(usage *llm.LLMUsage) {
+func (e *TableSuiteEvents) printUsage(usage *ai.LLMUsage) {
 	fmt.Println()
 	fmt.Println("=== Usage ===")
 	fmt.Printf("input=%d, output=%d, total=%d\n", usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/openai/openai-go/v2"
-	"github.com/petrjanda/frax/pkg/llm/tools"
+	"github.com/petrjanda/frax/pkg/ai/tools"
 )
 
 // convertToolUsage converts our ToolUsage interface to OpenAI's tool choice format
