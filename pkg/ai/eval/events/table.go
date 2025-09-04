@@ -75,7 +75,7 @@ func (e *TableSuiteEvents) OnSuiteError(error error) {
 func (e *TableSuiteEvents) OnCaseStart(variant workflows.Task, case_ *eval.Case) {
 	// No action needed for case start
 
-	fmt.Printf("%s | case '%s' ...", variant.Name(), case_)
+	fmt.Printf("%s | case '%s' \n", variant.Name(), case_)
 }
 
 func (e *TableSuiteEvents) OnCaseEnd(variant workflows.Task, case_ *eval.Case, errors []error) {

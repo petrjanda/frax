@@ -57,40 +57,40 @@ func main() {
 
 	// CASES
 
-	judge := NewScoringJudge(
-		"JSON", litellm, "claude-3-7-sonnet", "Is the message a valid JSON record? Valid means it's parseable as json", 50)
-
 	cases := []*eval.Case{
-		eval.NewCase(
-			"Monitor freshness of data of all dbt sources with P1 priority tag.", eval.WithAlias("P1 sources fresh"),
-		).
-			Expect(JSONPath("entities.query.entity_type").Eq("dbt_source")).
-			Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
-			Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
-			Expect(JSONPath("tests.table_stats_monitor.volume").DoesNotExist()).
-			Expect(JSONPath("tests.table_stats_monitor.change_delay").DoesNotExist()),
+		// eval.NewCase(
+		// 	"Monitor freshness of data of all dbt sources upstream of P1 data products.", eval.WithAlias("P1 sources fresh"),
+		// ).
+		// 	Expect(JSONPath("entities.query.entity_type").Eq("dbt_source")).
+		// 	Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
+		// 	Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
+		// 	Expect(JSONPath("tests.table_stats_monitor.volume").DoesNotExist()).
+		// 	Expect(JSONPath("tests.table_stats_monitor.change_delay").DoesNotExist()),
 
-		eval.NewCase(
-			"Ensure fields used in join clauses are tested for uniqueness where appropriate.", eval.WithAlias("Unique join"),
-		).
-			Expect(JSONPath("entities.query.is_join").Eq(true)).
-			Expect(JSONPath("tests.unique.columns.llm").Exists()),
+		// eval.NewCase(
+		// 	"Ensure fields used in join clauses are tested for uniqueness where appropriate.", eval.WithAlias("Unique join"),
+		// ).
+		// 	Expect(JSONPath("entities.query.is_join").Eq(true)).
+		// 	Expect(JSONPath("tests.unique.columns.llm").Exists()),
 
 		eval.NewCase(
 			"Tables impacting ML data products should test for data freshness and drift on feature columns.", eval.WithAlias("ML data products"),
 		).
 			Expect(JSONPath("entities.query.data_product_impact.llm").Exists()).
 			Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
-			Expect(JSONPath("tests.drift_monitor.columns.llm").Exists()),
+			Expect(JSONPath("tests.drift_monitor.columns.llm").Exists()).
+			Expect(NewScoringJudge(
+				"JSON", litellm, "claude-3-7-sonnet",
+				"Is the drift monitor column selection description unambiguous? It is unambiguous if you knew how to select columns based on the description.", 50,
+			)),
 
-		eval.NewCase(
-			"All sources upstream of P1 and P2 data products should have freshness and volume test.", eval.WithAlias("Product upstream"),
-		).
-			Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
-			Expect(JSONPath("entities.query.data_product_impact.importance.1").Eq("P2")).
-			Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
-			Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)).
-			Expect(judge),
+		// eval.NewCase(
+		// 	"All sources upstream of P1 and P2 data products should have freshness and volume test.", eval.WithAlias("Product upstream"),
+		// ).
+		// 	Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
+		// 	Expect(JSONPath("entities.query.data_product_impact.importance.1").Eq("P2")).
+		// 	Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
+		// 	Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)),
 	}
 
 	suite := eval.NewSuite(

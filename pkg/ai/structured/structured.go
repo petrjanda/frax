@@ -127,16 +127,9 @@ func (f *LLM) ValidateInput(input json.RawMessage) error {
 // Execute executes the LLM with structured output tool, returning the input as output (echo behavior)
 func (f *LLM) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 
-	// prettyArgs, err := json.MarshalIndent(args, "", "  ")
-	// if err != nil {
-	// 	panic(fmt.Sprintf("failed to marshal args: %v", err))
-	// }
-	// log.Println(string(prettyArgs))
-	// panic(f.ValidateInput(args))
-
 	// Validate input first
 	if err := f.ValidateInput(args); err != nil {
-		return nil, fmt.Errorf("input validation failed: %w", err)
+		return nil, err
 	}
 
 	// For LLMs with structured output, we return the input as output to enforce structure

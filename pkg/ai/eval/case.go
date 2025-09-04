@@ -2,6 +2,7 @@ package eval
 
 import (
 	"context"
+	"log"
 
 	_ "embed"
 
@@ -61,6 +62,8 @@ func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant workflows.T
 		if err := expectation.Eval(ctx, actual); err != nil {
 			events.OnExpectationError(variant, c, actual, expectation, err)
 			errors = append(errors, err)
+
+			log.Println(actual)
 		} else {
 			events.OnExpectationEnd(variant, c, expectation, nil)
 		}

@@ -83,25 +83,29 @@ type Operand struct {
 	IsUnion bool `json:"is_union,omitempty" jsonschema:"anyof_required=is_union"`
 
 	// We are matching all entities upstream of data products.
-	DataProductImpact *struct {
-		// Match data products by importance (often referred to as data product severity or priority).
-		Importance []string `json:"importance,omitempty" jsonschema:"oneof_required=importance,enum=P1,enum=P2,enum=P3"`
-
-		// Use to express criteria about data products that can't be expressed with other operations.
-		LLM string `json:"llm,omitempty" jsonschema:"oneof_required=llm"`
-	} `json:"data_product_impact,omitempty" jsonschema:"anyof_required=data_product_impact"`
+	DataProductImpact *DataProductImpact `json:"data_product_impact,omitempty" jsonschema:"anyof_required=data_product_impact"`
 
 	// Matches entity that has specific key/value annotation. Tags, meta fields and other attributes are expressed as annotations.
-	Annotation *struct {
-		Key   string `json:"key,omitempty" jsonschema:"required"`
-		Value string `json:"value,omitempty" jsonschema:"required"`
-	} `json:"annotation,omitempty" jsonschema:"anyof_required=annotation"`
+	Annotation *Annotation `json:"annotation,omitempty" jsonschema:"anyof_required=annotation"`
 
 	// // It will match all our operands and then expand selection to all nodes upstream via lineage.
 	// ExpandUpstream bool `json:"expand_upstream,omitempty"`
 
 	// // It will match all our operands and then expand selection to all nodes downstream via lineage.
 	// ExpandDownstream bool `json:"expand_downstream,omitempty"`
+}
+
+type DataProductImpact struct {
+	// Match data products by importance (often referred to as data product severity or priority).
+	Importance []string `json:"importance,omitempty" jsonschema:"oneof_required=importance,enum=P1,enum=P2,enum=P3"`
+
+	// Use to express criteria about data products that can't be expressed with other operations.
+	LLM string `json:"llm,omitempty" jsonschema:"oneof_required=llm"`
+}
+
+type Annotation struct {
+	Key   string `json:"key,omitempty" jsonschema:"required"`
+	Value string `json:"value,omitempty" jsonschema:"required"`
 }
 
 type LLMEntitySelector struct {

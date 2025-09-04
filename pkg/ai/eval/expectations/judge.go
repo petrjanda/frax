@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
@@ -87,6 +88,8 @@ func NewScoringJudge(name string, parent ai.LLM, model ai.ModelId, instruction s
 		if err := json.Unmarshal([]byte(response.Content), &verdict); err != nil {
 			return err
 		}
+
+		log.Println(verdict)
 
 		if verdict.Score < 0 || verdict.Score > 100 {
 			return fmt.Errorf("score must be between 0 and 100")
