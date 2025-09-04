@@ -153,6 +153,7 @@ type Tests struct {
 		ChangeDelay bool `json:"change_delay,omitempty"`
 	} `json:"table_stats_monitor,omitempty" jsonschema:"anyof_required=table_stats_monitor"`
 
+	// Monitor for draft in the metrics, typically useful for monitoring of distribution of ML variables.
 	DriftMonitor *struct {
 		Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
 	} `json:"drift_monitor,omitempty" jsonschema:"anyof_required=drift_monitor"`

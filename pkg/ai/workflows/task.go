@@ -16,6 +16,7 @@ type Task interface {
 	Clone() Task
 
 	WithName(name string) Task
+	WithRequestOpts(opts ...ai.LLMRequestOpts) Task
 }
 
 // TEST OUTPUT
@@ -44,7 +45,7 @@ func (t *TextTask) Invoke(ctx context.Context, llm ai.LLM, history ai.History) (
 	return llm.Invoke(ctx, t.Request.Clone(ai.WithHistory(history)))
 }
 
-func (t *TextTask) WithRequestOpts(opts ...ai.LLMRequestOpts) *TextTask {
+func (t *TextTask) WithRequestOpts(opts ...ai.LLMRequestOpts) Task {
 	new := t.Clone().(*TextTask)
 	for _, opt := range opts {
 		opt(new.Request)
@@ -126,7 +127,7 @@ func (t *StructuredTask[T]) With(opt StructuredTaskOpts[T]) *StructuredTask[T] {
 	return t
 }
 
-func (t *StructuredTask[T]) WithRequestOpts(opts ...ai.LLMRequestOpts) *StructuredTask[T] {
+func (t *StructuredTask[T]) WithRequestOpts(opts ...ai.LLMRequestOpts) Task {
 	new := t.Clone().(*StructuredTask[T])
 	for _, opt := range opts {
 		opt(new.Request)

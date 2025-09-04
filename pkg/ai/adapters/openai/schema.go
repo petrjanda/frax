@@ -3,6 +3,7 @@ package openai
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/invopop/jsonschema"
@@ -69,6 +70,11 @@ func (g *OpenAISchemaGenerator) GenerateSchema(v interface{}) (json.RawMessage, 
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal schema: %w", err)
+	}
+
+	// Write schema to schema.json for debugging/reference
+	if err := os.WriteFile("schema.json", schemaBytes, 0644); err != nil {
+		return nil, fmt.Errorf("failed to write schema file: %w", err)
 	}
 
 	return json.RawMessage(schemaBytes), nil
