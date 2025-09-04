@@ -18,7 +18,7 @@ func (m *mockTool) Description() string { return "Mock tool for testing" }
 func (m *mockTool) InputSchemaRaw() json.RawMessage {
 	return json.RawMessage(`{"type": "object"}`)
 }
-func (m *mockTool) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+func (m *mockTool) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 	return json.RawMessage(`{"result": "mock"}`), nil
 }
 

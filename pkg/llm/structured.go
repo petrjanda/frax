@@ -121,8 +121,8 @@ func (f *BaseLLMWithStructuredOutput) ValidateInput(input json.RawMessage) error
 	return nil
 }
 
-// Run executes the LLM with structured output tool, returning the input as output (echo behavior)
-func (f *BaseLLMWithStructuredOutput) Run(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+// Execute executes the LLM with structured output tool, returning the input as output (echo behavior)
+func (f *BaseLLMWithStructuredOutput) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 
 	// prettyArgs, err := json.MarshalIndent(args, "", "  ")
 	// if err != nil {
@@ -167,7 +167,7 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 	toolCalls := response.ToolCalls()
 	if len(toolCalls) > 0 {
 		toolCall := toolCalls[0]
-		result, err := f.Run(ctx, toolCall.Args)
+		result, err := f.Execute(ctx, toolCall.Args)
 		if err != nil {
 			f.events.OnToolError(ctx, toolCall, 0, err)
 			return nil, fmt.Errorf("structured output generation failed: %w", err)

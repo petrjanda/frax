@@ -185,7 +185,7 @@ func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, ta
 
 // executeToolAttempt executes a single tool attempt
 func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targetTool Tool) (Message, error) {
-	result, err := targetTool.Run(ctx, toolCall.Args)
+	result, err := targetTool.Execute(ctx, toolCall.Args)
 	if err != nil {
 		return nil, err
 	}
