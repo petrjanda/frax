@@ -1,4 +1,4 @@
-package llm
+package tools
 
 // ToolUsage represents how tools should be used in an LLM request
 type ToolUsage interface {

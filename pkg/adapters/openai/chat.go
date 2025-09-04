@@ -9,6 +9,7 @@ import (
 	"github.com/openai/openai-go/v2/option"
 	"github.com/openai/openai-go/v2/shared"
 	"github.com/petrjanda/frax/pkg/llm"
+	"github.com/petrjanda/frax/pkg/llm/tools"
 )
 
 // OpenAIAdapter implements the LLM interface using OpenAI's API
@@ -160,7 +161,7 @@ func (a *OpenAIAdapter) convertMessages(messages []llm.Message) []openai.ChatCom
 }
 
 // convertTools converts our Tool interface to OpenAI's format
-func (a *OpenAIAdapter) convertTools(tools []llm.Tool) []openai.ChatCompletionToolUnionParam {
+func (a *OpenAIAdapter) convertTools(tools []tools.Tool) []openai.ChatCompletionToolUnionParam {
 	var openaiTools []openai.ChatCompletionToolUnionParam
 
 	for _, tool := range tools {

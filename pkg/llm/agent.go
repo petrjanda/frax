@@ -9,6 +9,8 @@ import (
 	"time"
 
 	_ "embed"
+
+	"github.com/petrjanda/frax/pkg/llm/tools"
 )
 
 // Agent represents an agent that can use tools and interact with an LLM
@@ -121,7 +123,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 }
 
 // CallTool executes a tool call with retry logic using a formatter approach
-func (a *Agent) CallTool(ctx context.Context, toolbox Toolbox, toolCall *ToolCall) (Message, error) {
+func (a *Agent) CallTool(ctx context.Context, toolbox tools.Toolbox, toolCall *ToolCall) (Message, error) {
 	// Find the tool to get its input schema
 	targetTool, err := a.findTool(toolbox, toolCall.Name)
 	if err != nil {
@@ -132,7 +134,7 @@ func (a *Agent) CallTool(ctx context.Context, toolbox Toolbox, toolCall *ToolCal
 }
 
 // findTool finds a tool by name from the agent's tool list
-func (a *Agent) findTool(toolbox Toolbox, name string) (Tool, error) {
+func (a *Agent) findTool(toolbox tools.Toolbox, name string) (tools.Tool, error) {
 	for _, t := range toolbox {
 		if t.Name() == name {
 			return t, nil
@@ -142,7 +144,7 @@ func (a *Agent) findTool(toolbox Toolbox, name string) (Tool, error) {
 }
 
 // executeToolWithRetry manages the retry loop for tool execution
-func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, targetTool Tool) (Message, error) {
+func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool) (Message, error) {
 	var lastErr error
 	delay := a.retryDelay
 	currentToolCall := toolCall // Create a local copy
@@ -184,7 +186,7 @@ func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, ta
 }
 
 // executeToolAttempt executes a single tool attempt
-func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targetTool Tool) (Message, error) {
+func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool) (Message, error) {
 	result, err := targetTool.Execute(ctx, toolCall.Args)
 	if err != nil {
 		return nil, err
@@ -194,7 +196,7 @@ func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targ
 }
 
 // handleToolFailure handles tool failure and attempts to get corrected parameters
-func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targetTool Tool, attempt int, err error) (*ToolCall, bool) {
+func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool, attempt int, err error) (*ToolCall, bool) {
 
 	a.events.OnToolError(ctx, toolCall, attempt, err)
 
@@ -224,7 +226,7 @@ func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targe
 var correctionPromptFormat string
 
 // correctToolCall uses the LLM to get corrected parameters for a failed tool call
-func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetTool Tool, originalErr error) (json.RawMessage, error) {
+func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool, originalErr error) (json.RawMessage, error) {
 	errorMessage := NewUserMessage(fmt.Sprintf(
 		correctionPromptFormat,
 		toolCall.Name,

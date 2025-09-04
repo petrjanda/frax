@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/petrjanda/frax/pkg/llm/tools"
 	"github.com/xeipuuv/gojsonschema"
 )
 
 // LLMWithStructuredOutput implements the LLM interface to provide structured output formatting
 // It ignores tool call directives and forces the use of its own formatting tool
 type LLMWithStructuredOutput interface {
-	Tool
+	tools.Tool
 	LLM
 	FormatName() string
 	ValidateInput(input json.RawMessage) error
@@ -150,8 +151,8 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 	// Create a new request that forces the use of this LLM with structured output
 	// We ignore any existing tool usage and tool configurations
 	forcedRequest := request.Clone(
-		WithTools(f),                       // Only include this LLM with structured output as a tool
-		WithToolUsage(ForceTool(f.Name())), // Force the use of this LLM with structured output
+		WithTools(f),                             // Only include this LLM with structured output as a tool
+		WithToolUsage(tools.ForceTool(f.Name())), // Force the use of this LLM with structured output
 	)
 
 	// Log actual internal request

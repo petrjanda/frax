@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/petrjanda/frax/pkg/llm"
+	"github.com/petrjanda/frax/pkg/llm/tools"
 )
 
 // mockTool is a simple mock implementation for testing
@@ -25,20 +25,20 @@ func (m *mockTool) Execute(ctx context.Context, args json.RawMessage) (json.RawM
 func TestConvertToolUsage(t *testing.T) {
 	tests := []struct {
 		name      string
-		toolUsage llm.ToolUsage
-		tools     []llm.Tool
+		toolUsage tools.ToolUsage
+		tools     []tools.Tool
 		expectNil bool
 	}{
 		{
 			name:      "Auto tool selection should return nil",
-			toolUsage: llm.AutoToolSelection(),
-			tools:     []llm.Tool{},
+			toolUsage: tools.AutoToolSelection(),
+			tools:     []tools.Tool{},
 			expectNil: true,
 		},
 		{
 			name:      "Forced tool should return tool choice",
-			toolUsage: llm.ForceTool("calculator"),
-			tools:     []llm.Tool{&mockTool{name: "calculator"}},
+			toolUsage: tools.ForceTool("calculator"),
+			tools:     []tools.Tool{&mockTool{name: "calculator"}},
 			expectNil: false,
 		},
 	}

@@ -1,11 +1,13 @@
 package llm
 
+import "github.com/petrjanda/frax/pkg/llm/tools"
+
 type LLMRequest struct {
-	Model     ModelId   `json:"model"`
-	System    string    `json:"system"`
-	History   History   `json:"history"`
-	Tools     []Tool    `json:"tools"`
-	ToolUsage ToolUsage `json:"tool_usage"`
+	Model     ModelId         `json:"model"`
+	System    string          `json:"system"`
+	History   History         `json:"history"`
+	Tools     []tools.Tool    `json:"tools"`
+	ToolUsage tools.ToolUsage `json:"tool_usage"`
 
 	MaxCompletionTokens int     `json:"max_completion_tokens"`
 	Temperature         float64 `json:"temperature"`
@@ -27,13 +29,13 @@ func WithModel(model ModelId) LLMRequestOpts {
 	}
 }
 
-func WithToolUsage(toolUsage ToolUsage) LLMRequestOpts {
+func WithToolUsage(toolUsage tools.ToolUsage) LLMRequestOpts {
 	return func(r *LLMRequest) {
 		r.ToolUsage = toolUsage
 	}
 }
 
-func WithTools(tools ...Tool) LLMRequestOpts {
+func WithTools(tools ...tools.Tool) LLMRequestOpts {
 	return func(r *LLMRequest) {
 		r.Tools = append(r.Tools, tools...)
 	}
@@ -65,7 +67,7 @@ func WithTemperature(temperature float64) LLMRequestOpts {
 
 func NewLLMRequest(opts ...LLMRequestOpts) *LLMRequest {
 	r := &LLMRequest{
-		ToolUsage: AutoToolSelection(), // Default to auto tool selection
+		ToolUsage: tools.AutoToolSelection(), // Default to auto tool selection
 	}
 	for _, opt := range opts {
 		opt(r)
