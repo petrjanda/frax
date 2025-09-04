@@ -1,4 +1,4 @@
-package llm
+package agent
 
 import (
 	"bytes"
@@ -10,12 +10,14 @@ import (
 
 	_ "embed"
 
+	"github.com/petrjanda/frax/pkg/llm"
+	"github.com/petrjanda/frax/pkg/llm/structured"
 	"github.com/petrjanda/frax/pkg/llm/tools"
 )
 
 // Agent represents an agent that can use tools and interact with an LLM
 type Agent struct {
-	llm LLM
+	llm llm.LLM
 
 	maxRetries   int
 	retryDelay   time.Duration
@@ -23,7 +25,7 @@ type Agent struct {
 
 	outputSchema *json.RawMessage
 
-	events AgentEvents
+	events llm.AgentEvents
 }
 
 // AgentOpts represents options for configuring an agent
@@ -56,20 +58,20 @@ func WithOutputSchema(schema json.RawMessage) AgentOpts {
 	}
 }
 
-func WithEvents(events AgentEvents) AgentOpts {
+func WithEvents(events llm.AgentEvents) AgentOpts {
 	return func(a *Agent) {
 		a.events = events
 	}
 }
 
 // NewAgent creates a new agent with the given LLM and tools
-func NewAgent(llm LLM, opts ...AgentOpts) LLM {
+func NewAgent(llm_ llm.LLM, opts ...AgentOpts) llm.LLM {
 	a := &Agent{
-		llm:          llm,
+		llm:          llm_,
 		maxRetries:   3,                      // Default: 3 retries
 		retryDelay:   100 * time.Millisecond, // Default: 100ms initial delay
 		retryBackoff: 2.0,                    // Default: 2x backoff
-		events:       &NoopAgentEvents{},
+		events:       llm.NewNoopAgentEvents(),
 	}
 
 	for _, opt := range opts {
@@ -80,7 +82,7 @@ func NewAgent(llm LLM, opts ...AgentOpts) LLM {
 }
 
 // Loop processes the conversation loop, handling tool calls and LLM responses
-func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
+func (a *Agent) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
 	a.events.OnRequest(ctx, request)
 	response, err := a.llm.Invoke(ctx, request)
 	if err != nil {
@@ -93,14 +95,14 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 		for _, toolCall := range toolCalls {
 			message, err := a.CallTool(ctx, request.Tools, toolCall)
 			if err != nil {
-				response.AddMessage(NewToolResultErrorMessage(toolCall, err.Error()))
+				response.AddMessage(llm.NewToolResultErrorMessage(toolCall, err.Error()))
 			} else {
 				response.AddMessage(message)
 			}
 		}
 
 		request = request.Clone(
-			WithHistory(request.History.Append(response.Messages...)),
+			llm.WithHistory(request.History.Append(response.Messages...)),
 		)
 
 		a.events.OnResponse(ctx, request, response)
@@ -108,7 +110,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 	}
 
 	if a.outputSchema != nil {
-		formatted := NewBaseLLMWithStructuredOutput(*a.outputSchema, a.llm)
+		formatted := structured.NewLLM(*a.outputSchema, a.llm)
 		formattedResponse, err := formatted.Invoke(ctx, request)
 		if err != nil {
 			return nil, err
@@ -123,7 +125,7 @@ func (a *Agent) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, 
 }
 
 // CallTool executes a tool call with retry logic using a formatter approach
-func (a *Agent) CallTool(ctx context.Context, toolbox tools.Toolbox, toolCall *ToolCall) (Message, error) {
+func (a *Agent) CallTool(ctx context.Context, toolbox tools.Toolbox, toolCall *llm.ToolCall) (llm.Message, error) {
 	// Find the tool to get its input schema
 	targetTool, err := a.findTool(toolbox, toolCall.Name)
 	if err != nil {
@@ -144,7 +146,7 @@ func (a *Agent) findTool(toolbox tools.Toolbox, name string) (tools.Tool, error)
 }
 
 // executeToolWithRetry manages the retry loop for tool execution
-func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool) (Message, error) {
+func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *llm.ToolCall, targetTool tools.Tool) (llm.Message, error) {
 	var lastErr error
 	delay := a.retryDelay
 	currentToolCall := toolCall // Create a local copy
@@ -186,17 +188,17 @@ func (a *Agent) executeToolWithRetry(ctx context.Context, toolCall *ToolCall, ta
 }
 
 // executeToolAttempt executes a single tool attempt
-func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool) (Message, error) {
+func (a *Agent) executeToolAttempt(ctx context.Context, toolCall *llm.ToolCall, targetTool tools.Tool) (llm.Message, error) {
 	result, err := targetTool.Execute(ctx, toolCall.Args)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewToolResultMessage(toolCall, result), nil
+	return llm.NewToolResultMessage(toolCall, result), nil
 }
 
 // handleToolFailure handles tool failure and attempts to get corrected parameters
-func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool, attempt int, err error) (*ToolCall, bool) {
+func (a *Agent) handleToolFailure(ctx context.Context, toolCall *llm.ToolCall, targetTool tools.Tool, attempt int, err error) (*llm.ToolCall, bool) {
 
 	a.events.OnToolError(ctx, toolCall, attempt, err)
 
@@ -226,16 +228,16 @@ func (a *Agent) handleToolFailure(ctx context.Context, toolCall *ToolCall, targe
 var correctionPromptFormat string
 
 // correctToolCall uses the LLM to get corrected parameters for a failed tool call
-func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetTool tools.Tool, originalErr error) (json.RawMessage, error) {
-	errorMessage := NewUserMessage(fmt.Sprintf(
+func (a *Agent) correctToolCall(ctx context.Context, toolCall *llm.ToolCall, targetTool tools.Tool, originalErr error) (json.RawMessage, error) {
+	errorMessage := llm.NewUserMessage(fmt.Sprintf(
 		correctionPromptFormat,
 		toolCall.Name,
 		originalErr.Error(),
 		prettyJSON(toolCall.Args),
 	))
 
-	retryRequest := NewLLMRequest(WithHistory(NewHistory(errorMessage)))
-	formatter := NewBaseLLMWithStructuredOutput(targetTool.InputSchemaRaw(), a.llm)
+	retryRequest := llm.NewLLMRequest(llm.WithHistory(llm.NewHistory(errorMessage)))
+	formatter := structured.NewLLM(targetTool.InputSchemaRaw(), a.llm)
 
 	// Get corrected parameters from the LLM
 	retryResponse, retryErr := formatter.Invoke(ctx, retryRequest)
@@ -245,7 +247,7 @@ func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetT
 
 	// Extract the corrected parameters from the LLM response
 	if len(retryResponse.Messages) > 0 {
-		if userMessage, ok := retryResponse.Messages[0].(*TextMessage); ok {
+		if userMessage, ok := retryResponse.Messages[0].(*llm.TextMessage); ok {
 			slog.Info("Retry response", "response", userMessage.Content)
 			return []byte(userMessage.Content), nil
 		}
@@ -255,8 +257,8 @@ func (a *Agent) correctToolCall(ctx context.Context, toolCall *ToolCall, targetT
 }
 
 // HELPERS
-func (a *Agent) updateToolCallArgs(originalToolCall *ToolCall, newArgs json.RawMessage) *ToolCall {
-	return &ToolCall{
+func (a *Agent) updateToolCallArgs(originalToolCall *llm.ToolCall, newArgs json.RawMessage) *llm.ToolCall {
+	return &llm.ToolCall{
 		ID:   originalToolCall.ID,
 		Name: originalToolCall.Name,
 		Args: newArgs,

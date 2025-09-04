@@ -1,4 +1,4 @@
-package llm
+package structured
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 
 func TestBaseLLMWithStructuredOutput_JSONSerialization(t *testing.T) {
 	// Create a test instance
-	llm := &BaseLLMWithStructuredOutput{
+	llm := &LLM{
 		name:        "test_formatter",
 		description: "Test formatter tool",
 	}
@@ -53,7 +53,7 @@ func TestBaseLLMWithStructuredOutput_JSONSerialization(t *testing.T) {
 
 func TestBaseLLMWithStructuredOutput_JSONSerializationWithDefaultName(t *testing.T) {
 	// Create a test instance with default name
-	llm := &BaseLLMWithStructuredOutput{
+	llm := &LLM{
 		name:        "formatter",
 		description: "Must be called to provide structured output",
 	}

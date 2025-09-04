@@ -1,4 +1,4 @@
-package llm
+package structured
 
 import (
 	"context"
@@ -6,61 +6,62 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/pkg/llm/tools"
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// LLMWithStructuredOutput implements the LLM interface to provide structured output formatting
+// StructuredLLM implements the StructuredLLM interface to provide structured output formatting
 // It ignores tool call directives and forces the use of its own formatting tool
-type LLMWithStructuredOutput interface {
+type StructuredLLM interface {
 	tools.Tool
-	LLM
+	llm.LLM
 	FormatName() string
 	ValidateInput(input json.RawMessage) error
 }
 
-// BaseLLMWithStructuredOutput provides a basic implementation of the LLMWithStructuredOutput interface
-type BaseLLMWithStructuredOutput struct {
+// LLM provides a basic implementation of the LLMWithStructuredOutput interface
+type LLM struct {
 	name        string
 	description string
 	inputSchema json.RawMessage
-	llm         LLM // The underlying LLM to delegate to
+	llm         llm.LLM // The underlying LLM to delegate to
 
-	events LLMEvents
+	events llm.LLMEvents
 }
 
-// LLMWithStructuredOutputOpts represents options for configuring an LLM with structured output
-type LLMWithStructuredOutputOpts = func(*BaseLLMWithStructuredOutput)
+// LLMOpts represents options for configuring an LLM with structured output
+type LLMOpts = func(*LLM)
 
-// LLMWithStructuredOutputWithName sets a custom name for the tool (defaults to "formatter")
-func LLMWithStructuredOutputWithName(name string) LLMWithStructuredOutputOpts {
-	return func(f *BaseLLMWithStructuredOutput) {
+// WithName sets a custom name for the tool (defaults to "formatter")
+func WithName(name string) LLMOpts {
+	return func(f *LLM) {
 		f.name = name
 	}
 }
 
-// LLMWithStructuredOutputWithDescription sets a custom description for the tool
-func LLMWithStructuredOutputWithDescription(description string) LLMWithStructuredOutputOpts {
-	return func(f *BaseLLMWithStructuredOutput) {
+// WithDescription sets a custom description for the tool
+func WithDescription(description string) LLMOpts {
+	return func(f *LLM) {
 		f.description = description
 	}
 }
 
-func LLMWithStructuredOutputWithEvents(events LLMEvents) LLMWithStructuredOutputOpts {
-	return func(f *BaseLLMWithStructuredOutput) {
+func WithEvents(events llm.LLMEvents) LLMOpts {
+	return func(f *LLM) {
 		f.events = events
 	}
 }
 
-// NewBaseLLMWithStructuredOutput creates a new base LLM with structured output
+// NewLLM creates a new base LLM with structured output
 // Uses sensible defaults: name="formatter", description="Must be called to provide structured output"
-func NewBaseLLMWithStructuredOutput(inputSchema json.RawMessage, llm LLM, opts ...LLMWithStructuredOutputOpts) *BaseLLMWithStructuredOutput {
-	f := &BaseLLMWithStructuredOutput{
+func NewLLM(inputSchema json.RawMessage, llm_ llm.LLM, opts ...LLMOpts) StructuredLLM {
+	f := &LLM{
 		name:        "formatter",
 		description: "Must be called to provide structured output",
 		inputSchema: inputSchema,
-		llm:         llm,
-		events:      &NoopAgentEvents{},
+		llm:         llm_,
+		events:      llm.NewNoopAgentEvents(),
 	}
 
 	for _, opt := range opts {
@@ -71,27 +72,27 @@ func NewBaseLLMWithStructuredOutput(inputSchema json.RawMessage, llm LLM, opts .
 }
 
 // Name returns the name of the LLM with structured output
-func (f *BaseLLMWithStructuredOutput) Name() string {
+func (f *LLM) Name() string {
 	return f.name
 }
 
 // FormatName returns the format name (same as Name for base LLM with structured output)
-func (f *BaseLLMWithStructuredOutput) FormatName() string {
+func (f *LLM) FormatName() string {
 	return f.name
 }
 
 // Description returns the description of the LLM with structured output
-func (f *BaseLLMWithStructuredOutput) Description() string {
+func (f *LLM) Description() string {
 	return f.description
 }
 
 // InputSchemaRaw returns the input schema as raw JSON
-func (f *BaseLLMWithStructuredOutput) InputSchemaRaw() json.RawMessage {
+func (f *LLM) InputSchemaRaw() json.RawMessage {
 	return f.inputSchema
 }
 
 // ValidateInput validates the input against the schema
-func (f *BaseLLMWithStructuredOutput) ValidateInput(input json.RawMessage) error {
+func (f *LLM) ValidateInput(input json.RawMessage) error {
 	// @todo: add json schema validation here
 
 	// Create a schema loader and compile the schema
@@ -123,7 +124,7 @@ func (f *BaseLLMWithStructuredOutput) ValidateInput(input json.RawMessage) error
 }
 
 // Execute executes the LLM with structured output tool, returning the input as output (echo behavior)
-func (f *BaseLLMWithStructuredOutput) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
+func (f *LLM) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
 
 	// prettyArgs, err := json.MarshalIndent(args, "", "  ")
 	// if err != nil {
@@ -143,7 +144,7 @@ func (f *BaseLLMWithStructuredOutput) Execute(ctx context.Context, args json.Raw
 
 // Invoke implements the LLM interface
 // It ignores tool call directives and forces the use of this LLM with structured output
-func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRequest) (*LLMResponse, error) {
+func (f *LLM) Invoke(ctx context.Context, request *llm.LLMRequest) (*llm.LLMResponse, error) {
 	if f.llm == nil {
 		return nil, fmt.Errorf("no underlying LLM configured")
 	}
@@ -151,8 +152,8 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 	// Create a new request that forces the use of this LLM with structured output
 	// We ignore any existing tool usage and tool configurations
 	forcedRequest := request.Clone(
-		WithTools(f),                             // Only include this LLM with structured output as a tool
-		WithToolUsage(tools.ForceTool(f.Name())), // Force the use of this LLM with structured output
+		llm.WithTools(f), // Only include this LLM with structured output as a tool
+		llm.WithToolUsage(tools.ForceTool(f.Name())), // Force the use of this LLM with structured output
 	)
 
 	// Log actual internal request
@@ -184,7 +185,7 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 		// response := NewLLMResponse()
 
 		response := response.Clone()
-		response.AddMessage(NewUserMessage(string(content)))
+		response.AddMessage(llm.NewUserMessage(string(content)))
 		f.events.OnResponse(ctx, request, response)
 
 		// Create a new response with the formatted result
@@ -196,7 +197,7 @@ func (f *BaseLLMWithStructuredOutput) Invoke(ctx context.Context, request *LLMRe
 
 // MarshalJSON implements custom JSON marshaling for BaseLLMWithStructuredOutput
 // This ensures that when the struct is serialized to JSON, it reports the tool name
-func (f *BaseLLMWithStructuredOutput) MarshalJSON() ([]byte, error) {
+func (f *LLM) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"name":         f.name,
 		"description":  f.description,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/adapters/openai"
+	"github.com/petrjanda/frax/pkg/llm/structured"
 
 	"github.com/petrjanda/frax/pkg/eval"
 	"github.com/petrjanda/frax/pkg/eval/events"
@@ -34,7 +35,7 @@ func main() {
 	}
 
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
-	structuredLLM := llm.NewBaseLLMWithStructuredOutput(directiveSchema, litellm)
+	structuredLLM := structured.NewLLM(directiveSchema, litellm)
 
 	// VARIANT
 

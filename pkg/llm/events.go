@@ -20,6 +20,10 @@ type AgentEvents interface {
 
 type NoopAgentEvents struct{}
 
+func NewNoopAgentEvents() AgentEvents {
+	return &NoopAgentEvents{}
+}
+
 func (e *NoopAgentEvents) OnRequest(ctx context.Context, request *LLMRequest) {}
 func (e *NoopAgentEvents) OnResponse(ctx context.Context, request *LLMRequest, response *LLMResponse) {
 }

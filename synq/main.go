@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/adapters/openai"
+	"github.com/petrjanda/frax/pkg/llm/structured"
 
 	"github.com/petrjanda/frax/pkg/llm"
 	"github.com/petrjanda/frax/synq/dsl"
@@ -33,12 +34,11 @@ func main() {
 	}
 
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
-
 	writeSchema(directiveSchema, "schema.json")
 
-	structuredLLM := llm.NewBaseLLMWithStructuredOutput(
+	structuredLLM := structured.NewLLM(
 		directiveSchema, openaiLLM,
-		llm.LLMWithStructuredOutputWithEvents(llm.NewJSONFileLogAgentEvents("log.json")),
+		structured.WithEvents(llm.NewJSONFileLogAgentEvents("log.json")),
 	)
 
 	system := PromptPlannerSystem
