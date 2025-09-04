@@ -12,13 +12,13 @@ import (
 type JudgeExpectation struct {
 	Name        string
 	Instruction string
-	Model       string
+	Model       llm.ModelId
 	llm         llm.LLM
 
 	judgement func(ctx context.Context, response *llm.TextMessage) error
 }
 
-func NewJudge[T any](name string, parent llm.LLM, model string, instruction string, judgement func(ctx context.Context, response *llm.TextMessage) error) *JudgeExpectation {
+func NewJudge[T any](name string, parent llm.LLM, model llm.ModelId, instruction string, judgement func(ctx context.Context, response *llm.TextMessage) error) *JudgeExpectation {
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema((*T)(nil))
 
 	return &JudgeExpectation{
@@ -80,7 +80,7 @@ type ScoringJudgeVerdict struct {
 	Reason string `json:"reason" jsonschema:"required"`
 }
 
-func NewScoringJudge(name string, parent llm.LLM, model string, instruction string, threshold int) *ScoringJudgeExpectation {
+func NewScoringJudge(name string, parent llm.LLM, model llm.ModelId, instruction string, threshold int) *ScoringJudgeExpectation {
 	judgement := func(ctx context.Context, response *llm.TextMessage) error {
 		var verdict ScoringJudgeVerdict
 		if err := json.Unmarshal([]byte(response.Content), &verdict); err != nil {

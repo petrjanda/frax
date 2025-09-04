@@ -104,12 +104,12 @@ func main() {
 	}
 }
 
-func getModel() string {
+func getModel() llm.ModelId {
 	model := os.Getenv("OPENAI_MODEL")
 	if model == "" {
 		model = "o3-mini"
 	}
-	return model
+	return llm.ModelId(model)
 }
 
 func getAdapter() (llm.LLM, error) {

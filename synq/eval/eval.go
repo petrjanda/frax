@@ -28,30 +28,30 @@ func main() {
 
 	// SETUP
 
-	openaiLLM, err := getAdapter()
+	litellm, err := getAdapter()
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
 	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
-	structuredLLM := llm.NewBaseLLMWithStructuredOutput(directiveSchema, openaiLLM)
+	structuredLLM := llm.NewBaseLLMWithStructuredOutput(directiveSchema, litellm)
 
 	// VARIANT
 
 	variants := []*llm.LLMRequest{
-		llm.NewLLMRequest(
-			llm.WithModel("claude-3-7-sonnet"),
-			llm.WithSystem(prompts.PlannerSystem),
-			llm.WithTemperature(0.0),
-			llm.WithMaxCompletionTokens(1000),
-		),
-
 		// llm.NewLLMRequest(
-		// 	llm.WithModel("claude-4-sonnet"),
+		// 	llm.WithModel("claude-3-7-sonnet"),
 		// 	llm.WithSystem(prompts.PlannerSystem),
 		// 	llm.WithTemperature(0.0),
 		// 	llm.WithMaxCompletionTokens(1000),
 		// ),
+
+		llm.NewLLMRequest(
+			llm.WithModel("claude-4-sonnet"),
+			llm.WithSystem(prompts.PlannerSystem),
+			llm.WithTemperature(0.0),
+			llm.WithMaxCompletionTokens(1000),
+		),
 
 		// llm.NewLLMRequest(
 		// 	llm.WithModel("claude-3-5-haiku"),
@@ -63,7 +63,8 @@ func main() {
 
 	// CASES
 
-	judge := NewScoringJudge("JSON", openaiLLM, "claude-3-7-sonnet", "Is the message a valid JSON record? Valid means it's parseable as json", 50)
+	judge := NewScoringJudge(
+		"JSON", litellm, "claude-3-7-sonnet", "Is the message a valid JSON record? Valid means it's parseable as json", 50)
 
 	cases := []*eval.Case{
 		eval.NewCase(

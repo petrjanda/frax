@@ -39,13 +39,13 @@ type VariantResult struct {
 
 // TableSuiteEvents creates a table showing test results across variants
 type TableSuiteEvents struct {
-	variants map[string]*VariantResult // key: variant.Model
+	variants map[llm.ModelId]*VariantResult // key: variant.Model
 	cases    []*eval.Case
 }
 
 func NewTableSuiteEvents() eval.SuiteEvents {
 	return &TableSuiteEvents{
-		variants: make(map[string]*VariantResult),
+		variants: make(map[llm.ModelId]*VariantResult),
 		cases:    make([]*eval.Case, 0),
 	}
 }
@@ -181,7 +181,7 @@ func (e *TableSuiteEvents) printTable() {
 	// Print header
 	header := "Test Case"
 	for _, variant := range orderedVariants {
-		header += "\t" + variant.Variant.Model
+		header += "\t" + string(variant.Variant.Model)
 	}
 	fmt.Fprintln(w, header)
 

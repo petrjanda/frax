@@ -1,7 +1,7 @@
 package llm
 
 type LLMRequest struct {
-	Model     string    `json:"model"`
+	Model     ModelId   `json:"model"`
 	System    string    `json:"system"`
 	History   History   `json:"history"`
 	Tools     []Tool    `json:"tools"`
@@ -11,9 +11,17 @@ type LLMRequest struct {
 	Temperature         float64 `json:"temperature"`
 }
 
+type ModelId string
+
+const (
+	Claude3Sonnet ModelId = "claude-3-7-sonnet"
+	Claude4Sonnet ModelId = "claude-4-sonnet"
+	Claude3Haiku  ModelId = "claude-3-5-haiku"
+)
+
 type LLMRequestOpts = func(*LLMRequest)
 
-func WithModel(model string) LLMRequestOpts {
+func WithModel(model ModelId) LLMRequestOpts {
 	return func(r *LLMRequest) {
 		r.Model = model
 	}
