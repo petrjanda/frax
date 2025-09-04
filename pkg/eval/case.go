@@ -7,7 +7,7 @@ import (
 
 	"github.com/petrjanda/frax/pkg/llm"
 
-	"github.com/petrjanda/frax/synq/eval/expectations"
+	"github.com/petrjanda/frax/pkg/eval/expectations"
 )
 
 type Case struct {
@@ -56,11 +56,11 @@ type CaseResult struct {
 
 func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant *llm.LLMRequest, actual string) *CaseResult {
 	errors := []error{}
-	events.OnCaseStart(variant, c)
 
 	for _, expectation := range c.Expectations {
-		if err := expectation.Eval(actual); err != nil {
-			events.OnExpectationError(variant, c, expectation, err)
+		events.OnExpectationStart(variant, c, expectation)
+		if err := expectation.Eval(ctx, actual); err != nil {
+			events.OnExpectationError(variant, c, actual, expectation, err)
 			errors = append(errors, err)
 		} else {
 			events.OnExpectationEnd(variant, c, expectation, nil)

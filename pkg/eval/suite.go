@@ -2,12 +2,10 @@ package eval
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/petrjanda/frax/pkg/llm"
 
-	"github.com/petrjanda/frax/synq/eval/expectations"
+	"github.com/petrjanda/frax/pkg/eval/expectations"
 
 	_ "embed"
 )
@@ -17,7 +15,6 @@ type Suite struct {
 	Model    llm.LLM
 	Variants []*llm.LLMRequest
 
-	Total *SuiteResult
 	Usage *llm.LLMUsage
 
 	events SuiteEvents
@@ -34,7 +31,7 @@ type SuiteEvents interface {
 
 	OnExpectationStart(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation)
 	OnExpectationEnd(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
-	OnExpectationError(variant *llm.LLMRequest, case_ *Case, expectation expectations.Expectation, error error)
+	OnExpectationError(variant *llm.LLMRequest, case_ *Case, actual string, expectation expectations.Expectation, error error)
 }
 
 type SuiteResult struct {
@@ -67,7 +64,6 @@ func NewSuite(events SuiteEvents, cases []*Case, model llm.LLM, req []*llm.LLMRe
 		Model:    model,
 		Variants: req,
 
-		Total: NewSuiteResult(),
 		Usage: llm.NewLLMUsage(0, 0, 0),
 
 		events: events,
@@ -85,14 +81,13 @@ func (s *Suite) Run(ctx context.Context) error {
 
 			variant = variant.Clone(llm.WithHistory(history))
 
+			s.events.OnCaseStart(variant, q)
+
 			// Run the agent
 			response, err := s.Model.Invoke(ctx, variant)
 
 			if err != nil {
-				s.Total.FatalResult()
-
-				fmt.Printf("  - failed:\n    \033[31m%v\033[0m\n", err)
-				fmt.Println("")
+				s.events.OnCaseError(variant, q, err)
 				continue
 			}
 
@@ -100,27 +95,10 @@ func (s *Suite) Run(ctx context.Context) error {
 
 			lastMessage, ok := response.Messages[len(response.Messages)-1].(*llm.TextMessage)
 			if !ok {
-				s.Total.FatalResult()
 				continue
 			}
 
-			result := q.Eval(ctx, s.events, variant, lastMessage.Content)
-			s.Total.Result(result)
-
-			if result.Errors > 0 {
-				var directive map[string]any
-				if err = json.Unmarshal([]byte(lastMessage.Content), &directive); err != nil {
-					fmt.Printf("failed unmarshalling: %v", lastMessage.Content)
-				}
-
-				if payload, err := json.MarshalIndent(directive, "", "  "); err != nil {
-					fmt.Printf("failed marshalling: %v", err)
-				} else {
-					fmt.Println("actual output was ```")
-					fmt.Println(string(payload))
-					fmt.Println("```")
-				}
-			}
+			q.Eval(ctx, s.events, variant, lastMessage.Content)
 		}
 	}
 

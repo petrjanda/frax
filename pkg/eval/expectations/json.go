@@ -1,6 +1,7 @@
 package expectations
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tidwall/gjson"
@@ -23,7 +24,7 @@ func JSONPath(path string) *JSONExpectation {
 	}
 }
 
-func (e *JSONExpectation) Eval(actual string) error {
+func (e *JSONExpectation) Eval(_ context.Context, actual string) error {
 	if e.Expected == nil {
 		return fmt.Errorf("no assertion given for path %s", e.Path)
 	}
