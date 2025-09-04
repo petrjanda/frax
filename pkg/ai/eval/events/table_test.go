@@ -22,8 +22,8 @@ func TestTableSuiteEvents(t *testing.T) {
 
 	// Create mock variants
 	variants := []*eval.Variant{
-		eval.NewVariant("gpt-3.5-turbo", workflows.NewTask(ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")), nil)),
-		eval.NewVariant("gpt-4", workflows.NewTask(ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")), nil)),
+		eval.NewVariant("gpt-3.5-turbo", workflows.NewTask("gpt-3.5-turbo", ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")), nil)),
+		eval.NewVariant("gpt-4", workflows.NewTask("gpt-4", ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")), nil)),
 	}
 
 	// Create table events
