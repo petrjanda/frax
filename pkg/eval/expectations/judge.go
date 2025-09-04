@@ -7,6 +7,7 @@ import (
 
 	"github.com/petrjanda/frax/pkg/adapters/openai"
 	"github.com/petrjanda/frax/pkg/llm"
+	"github.com/petrjanda/frax/pkg/llm/structured"
 )
 
 type JudgeExpectation struct {
@@ -25,7 +26,7 @@ func NewJudge[T any](name string, parent llm.LLM, model llm.ModelId, instruction
 		Name:        name,
 		Instruction: instruction,
 		Model:       model,
-		llm: llm.NewBaseLLMWithStructuredOutput(
+		llm: structured.NewLLM(
 			directiveSchema, parent,
 		),
 		judgement: judgement,
