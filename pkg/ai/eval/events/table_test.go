@@ -7,6 +7,7 @@ import (
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/eval"
 	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 )
 
 func TestTableSuiteEvents(t *testing.T) {
@@ -21,8 +22,8 @@ func TestTableSuiteEvents(t *testing.T) {
 
 	// Create mock variants
 	variants := []*eval.Variant{
-		eval.NewVariant("gpt-3.5-turbo", nil, ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt"))),
-		eval.NewVariant("gpt-4", nil, ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt"))),
+		eval.NewVariant("gpt-3.5-turbo", workflows.NewTask(ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")), nil)),
+		eval.NewVariant("gpt-4", workflows.NewTask(ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")), nil)),
 	}
 
 	// Create table events

@@ -5,21 +5,21 @@ import (
 
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 
 	_ "embed"
 )
 
 type Variant struct {
-	Name    string
-	LLM     ai.LLM
-	Request *ai.LLMRequest
+	Name string
+
+	Task *workflows.Task
 }
 
-func NewVariant(name string, llm ai.LLM, request *ai.LLMRequest) *Variant {
+func NewVariant(name string, task *workflows.Task) *Variant {
 	return &Variant{
-		Name:    name,
-		LLM:     llm,
-		Request: request,
+		Name: name,
+		Task: task,
 	}
 }
 
@@ -77,7 +77,7 @@ func NewSuite(events SuiteEvents, cases []*Case, variants []*Variant) *Suite {
 	}
 }
 
-func (s *Suite) Run(ctx context.Context) error {
+func (s *Suite) Run(ctx context.Context, llm ai.LLM) error {
 	s.events.OnSuiteStart(s)
 	for _, variant := range s.Variants {
 		for _, q := range s.Cases {
@@ -86,12 +86,10 @@ func (s *Suite) Run(ctx context.Context) error {
 				ai.NewUserMessage(q.Input),
 			)
 
-			req := variant.Request.Clone(ai.WithHistory(history))
-
 			s.events.OnCaseStart(variant, q)
 
 			// Run the agent
-			response, err := variant.LLM.Invoke(ctx, req)
+			response, err := variant.Task.Invoke(ctx, llm, history)
 
 			if err != nil {
 				s.events.OnCaseError(variant, q, err)

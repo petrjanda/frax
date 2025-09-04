@@ -8,14 +8,11 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
-	"github.com/petrjanda/frax/pkg/ai/structured"
+	"github.com/petrjanda/frax/synq/tasks"
 
 	"github.com/petrjanda/frax/pkg/ai/eval"
 	"github.com/petrjanda/frax/pkg/ai/eval/events"
 	. "github.com/petrjanda/frax/pkg/ai/eval/expectations"
-
-	"github.com/petrjanda/frax/synq/dsl"
-	"github.com/petrjanda/frax/synq/prompts"
 
 	_ "embed"
 )
@@ -30,17 +27,14 @@ func main() {
 
 	// SETUP
 
-	litellm, err := getAdapter()
+	litellm, err := getConnector()
 	if err != nil {
 		log.Fatalf("Failed to create OpenAI adapter: %v", err)
 	}
 
-	directiveSchema := openai.NewOpenAISchemaGenerator().MustGenerateSchema(dsl.Directive{})
-	structuredLLM := structured.NewLLM(directiveSchema, litellm)
-
 	// VARIANT
 
-	current := prompts.PlannerTask
+	current := tasks.PlannerTask
 
 	variants := []*eval.Variant{
 		// ai.NewLLMRequest(
@@ -50,8 +44,8 @@ func main() {
 		// 	ai.WithMaxCompletionTokens(1000),
 		// ),
 
-		eval.NewVariant("current", structuredLLM, current),
-		eval.NewVariant("claude-3.7-sonnet", structuredLLM, current.Clone(ai.WithModel("claude-3-7-sonnet"))),
+		eval.NewVariant("current", current),
+		eval.NewVariant("claude-3.7-sonnet", current), // current.Clone(workflows.WithRequest(current.Request.Clone(ai.WithModel("claude-3-7-sonnet")))),
 
 		// ai.NewLLMRequest(
 		// 	ai.WithModel("claude-3-5-haiku"),
@@ -103,12 +97,12 @@ func main() {
 		events.NewTableSuiteEvents(), cases, variants,
 	)
 
-	if err := suite.Run(ctx); err != nil {
+	if err := suite.Run(ctx, litellm); err != nil {
 		log.Fatalf("Failed to run suite: %v", err)
 	}
 }
 
-func getAdapter() (ai.LLM, error) {
+func getConnector() (ai.LLM, error) {
 	// Get OpenAI API key from environment
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
