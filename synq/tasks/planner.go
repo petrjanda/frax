@@ -51,42 +51,40 @@ type Directive struct {
 }
 
 type EntitiesDirective struct {
-	// Structured query selector. Operands are ANDed together.
-	// Query *Operand `json:"query,omitempty" jsonschema:"oneof_required=query"`
+	// Structured query selector. Operands are ANDed together. Add one or more operands.
 	Query *Operand `json:"query,omitempty"`
 
 	// Prompt should only contain instructions to select entities. It should not specify what tests to deploy or columns to test.
-	// LLM string `json:"llm,omitempty" jsonschema:"oneof_required=llm"`
 	LLM string `json:"llm,omitempty"`
 }
 
 type Operand struct {
 	// By how its materialized in the database (table, view, materialized_view)
-	Materialization string `json:"materialization,omitempty" jsonschema:"anyof_required=materialization"`
+	Materialization string `json:"materialization,omitempty" jsonschema:""`
 
 	// By its type (dbt_model, dbt_source, table, view, airflow_task, tableau_dashboard, etc.)
-	EntityType string `json:"entity_type,omitempty" jsonschema:"anyof_required=entity_type"`
+	EntityType string `json:"entity_type,omitempty" jsonschema:""`
 
 	// By its name, typically table name.
-	Name string `json:"name,omitempty" jsonschema:"anyof_required=name"`
+	Name string `json:"name,omitempty" jsonschema:""`
 
 	// By its schema
-	Schema string `json:"schema,omitempty" jsonschema:"anyof_required=schema"`
+	Schema string `json:"schema,omitempty" jsonschema:""`
 
 	// Matches entities that are data sources
-	IsSource bool `json:"is_source,omitempty" jsonschema:"anyof_required=is_source"`
+	IsSource bool `json:"is_source,omitempty" jsonschema:""`
 
 	// Matches entities that JOIN the data.
-	IsJoin bool `json:"is_join,omitempty" jsonschema:"anyof_required=is_join"`
+	IsJoin bool `json:"is_join,omitempty" jsonschema:""`
 
 	// Matches entities that are UNION the data.
-	IsUnion bool `json:"is_union,omitempty" jsonschema:"anyof_required=is_union"`
+	IsUnion bool `json:"is_union,omitempty" jsonschema:""`
 
 	// We are matching all entities upstream of data products.
-	DataProductImpact *DataProductImpact `json:"data_product_impact,omitempty" jsonschema:"anyof_required=data_product_impact"`
+	DataProductImpact *DataProductImpact `json:"data_product_impact,omitempty" jsonschema:""`
 
 	// Matches entity that has specific key/value annotation. Tags, meta fields and other attributes are expressed as annotations.
-	Annotation *Annotation `json:"annotation,omitempty" jsonschema:"anyof_required=annotation"`
+	Annotation *Annotation `json:"annotation,omitempty" jsonschema:""`
 
 	// // It will match all our operands and then expand selection to all nodes upstream via lineage.
 	// ExpandUpstream bool `json:"expand_upstream,omitempty"`
@@ -115,21 +113,21 @@ type LLMEntitySelector struct {
 type Tests struct {
 	Unique *struct {
 		Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
-	} `json:"unique,omitempty" jsonschema:"anyof_required=unique"`
+	} `json:"unique,omitempty" jsonschema:""`
 
 	NotNull *struct {
 		Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
-	} `json:"not_null,omitempty" jsonschema:"anyof_required=not_null"`
+	} `json:"not_null,omitempty" jsonschema:""`
 
 	Pattern *struct {
 		Column  string `json:"column,omitempty" jsonschema:"required"`
 		Pattern string `json:"pattern,omitempty" jsonschema:"required"`
-	} `json:"pattern,omitempty" jsonschema:"anyof_required=pattern"`
+	} `json:"pattern,omitempty" jsonschema:""`
 
 	Length *struct {
 		Column string `json:"column,omitempty" jsonschema:"required"`
 		Length int    `json:"length,omitempty" jsonschema:"required"`
-	} `json:"length,omitempty" jsonschema:"anyof_required=length"`
+	} `json:"length,omitempty" jsonschema:""`
 
 	Range *struct {
 		Column string `json:"column,omitempty" jsonschema:"required"`
@@ -139,27 +137,27 @@ type Tests struct {
 
 		// Maximum value. If specified alone, the test acts as <= Max.
 		Max int `json:"max"`
-	} `json:"range,omitempty" jsonschema:"anyof_required=range"`
+	} `json:"range,omitempty" jsonschema:""`
 
 	AcceptedValues *struct {
 		Column string   `json:"column,omitempty" jsonschema:"required"`
 		Values []string `json:"values,omitempty" jsonschema:"required"`
-	} `json:"accepted_values,omitempty" jsonschema:"anyof_required=accepted_values"`
+	} `json:"accepted_values,omitempty" jsonschema:""`
 
 	// Monitor table for key metrics such as volume of rows, freshness of data, and delay between changes to number of rows. Doesn't need column selection.
 	TableStatsMonitor *struct {
 		Volume      bool `json:"volume,omitempty"`
 		Freshness   bool `json:"freshness,omitempty"`
 		ChangeDelay bool `json:"change_delay,omitempty"`
-	} `json:"table_stats_monitor,omitempty" jsonschema:"anyof_required=table_stats_monitor"`
+	} `json:"table_stats_monitor,omitempty" jsonschema:""`
 
 	// Monitor for draft in the metrics, typically useful for monitoring of distribution of ML variables.
 	DriftMonitor *struct {
 		Columns *ColumnsDirective `json:"columns,omitempty" jsonschema:"required"`
-	} `json:"drift_monitor,omitempty" jsonschema:"anyof_required=drift_monitor"`
+	} `json:"drift_monitor,omitempty" jsonschema:""`
 
 	// Use to express ambiguous criteria that can't be expressed with other operations.
-	LLM string `json:"llm,omitempty" jsonschema:"anyof_required=llm"`
+	LLM string `json:"llm,omitempty" jsonschema:""`
 }
 
 type ColumnsDirective struct {

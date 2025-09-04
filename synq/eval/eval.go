@@ -38,22 +38,9 @@ func main() {
 	current := tasks.PlannerTask
 
 	variants := []workflows.Task{
-		// ai.NewLLMRequest(
-		// 	ai.WithModel("claude-3-7-sonnet"),
-		// 	ai.WithSystem(prompts.PlannerSystem),
-		// 	ai.WithTemperature(0.0),
-		// 	ai.WithMaxCompletionTokens(1000),
-		// ),
-
 		current.WithName("gemini").WithRequestOpts(ai.WithModel("gemini-2-5-pro")),
+		current.WithName("gemini-flash").WithRequestOpts(ai.WithModel("gemini-2-5-flash")),
 		current,
-
-		// ai.NewLLMRequest(
-		// 	ai.WithModel("claude-3-5-haiku"),
-		// 	ai.WithSystem(prompts.PlannerSystem),
-		// 	ai.WithTemperature(0.0),
-		// 	ai.WithMaxCompletionTokens(1000),
-		// ),
 	}
 
 	// CASES
@@ -85,13 +72,13 @@ func main() {
 		// 	"Is the drift monitor column selection description unambiguous? It is unambiguous if you knew how to select columns based on the description. You can assume in future ", 50,
 		// )),
 
-		// eval.NewCase(
-		// 	"All sources upstream of P1 and P2 data products should have freshness and volume test.", eval.WithAlias("Product upstream"),
-		// ).
-		// 	Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
-		// 	Expect(JSONPath("entities.query.data_product_impact.importance.1").Eq("P2")).
-		// 	Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
-		// 	Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)),
+		eval.NewCase(
+			"All sources upstream of P1 and P2 data products should have freshness and volume test.", eval.WithAlias("Product upstream"),
+		).
+			Expect(JSONPath("entities.query.data_product_impact.importance.0").Eq("P1")).
+			Expect(JSONPath("entities.query.data_product_impact.importance.1").Eq("P2")).
+			Expect(JSONPath("tests.table_stats_monitor.freshness").Eq(true)).
+			Expect(JSONPath("tests.table_stats_monitor.volume").Eq(true)),
 	}
 
 	suite := eval.NewSuite(

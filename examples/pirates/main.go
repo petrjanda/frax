@@ -13,7 +13,7 @@ import (
 	"github.com/petrjanda/frax/pkg/ai/workflows"
 )
 
-type PirateTranslation struct {
+type Translation struct {
 	// Input message
 	In string `json:"in" jsonschema:"required"`
 
@@ -21,7 +21,7 @@ type PirateTranslation struct {
 	Out string `json:"out" jsonschema:"required"`
 }
 
-var PiratesTask = workflows.NewStructuredTask[PirateTranslation](
+var PiratesTask = workflows.NewStructuredTask[Translation](
 	"arrrr",
 	ai.NewLLMRequest(
 		ai.WithModel("claude-4-sonnet"),
@@ -29,6 +29,23 @@ var PiratesTask = workflows.NewStructuredTask[PirateTranslation](
 			You are a pirate translator.
 
 			User will provide a message in English and your task is to translate it into pirate speech.
+
+			Important:
+			* Keep length of your response similar to user's message.
+		`),
+		ai.WithTemperature(1.0),
+		ai.WithMaxCompletionTokens(1000),
+	),
+)
+
+var ReversePiratesTask = workflows.NewStructuredTask[Translation](
+	"no-arrrr",
+	ai.NewLLMRequest(
+		ai.WithModel("claude-4-sonnet"),
+		ai.WithSystem(`
+			You are a pirate translator.
+
+			User will provide a message in pirate speech and your task is to translate it into English.
 
 			Important:
 			* Keep length of your response similar to user's message.
@@ -51,23 +68,23 @@ func main() {
 	}
 
 	for _, q := range queries {
-		response, err := PiratesTask.Invoke(ctx, litellm, ai.NewHistory(
+		// Translate to pirate
+		response, _ := PiratesTask.Invoke(ctx, litellm, ai.NewHistory(
 			ai.NewUserMessage(q),
 		))
 
-		if err != nil {
-			log.Fatalf("llm failed: %v", err)
-		}
-
-		var pirateTranslation PirateTranslation
-		err = json.Unmarshal([]byte(response.LastMessageAsText().Content), &pirateTranslation)
-		if err != nil {
-			log.Fatalf("failed unmarshalling: %v", err)
-		}
-
 		// Print the conversation
+		pirateTranslation := toTranslation(response.LastMessageAsText().Content)
 		fmt.Printf("%s ==> %s\n", pirateTranslation.In, pirateTranslation.Out)
 
+		// Translate back to English
+		response, _ = ReversePiratesTask.Invoke(ctx, litellm, ai.NewHistory(
+			ai.NewUserMessage(pirateTranslation.Out),
+		))
+
+		englishTranslation := toTranslation(response.LastMessageAsText().Content)
+		fmt.Printf("%s ==> %s\n", englishTranslation.In, englishTranslation.Out)
+		fmt.Println("========================================")
 	}
 }
 
@@ -90,4 +107,14 @@ func getLLM() (ai.LLM, error) {
 	}
 
 	return openaiLLM, nil
+}
+
+func toTranslation(text string) Translation {
+	var pirateTranslation Translation
+	err := json.Unmarshal([]byte(text), &pirateTranslation)
+	if err != nil {
+		panic(err)
+	}
+
+	return pirateTranslation
 }
