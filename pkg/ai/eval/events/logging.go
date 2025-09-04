@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/petrjanda/frax/pkg/ai"
-	"github.com/petrjanda/frax/pkg/eval"
-	"github.com/petrjanda/frax/pkg/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/eval"
+	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
 )
 
 type LoggingSuiteEvents struct{}
@@ -37,29 +36,29 @@ func (e *LoggingSuiteEvents) OnSuiteError(error error) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnCaseStart(variant *ai.LLMRequest, case_ *eval.Case) {
+func (e *LoggingSuiteEvents) OnCaseStart(variant *eval.Variant, case_ *eval.Case) {
 	// fmt.Printf("%s | case '%s'\n", variant.Model, case_)
 }
 
-func (e *LoggingSuiteEvents) OnCaseEnd(variant *ai.LLMRequest, case_ *eval.Case, errors []error) {
-	fmt.Printf("%s | case '%s' = total=%d, ok=%d, error=%d\n", variant.Model, case_, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
+func (e *LoggingSuiteEvents) OnCaseEnd(variant *eval.Variant, case_ *eval.Case, errors []error) {
+	fmt.Printf("%s | case '%s' = total=%d, ok=%d, error=%d\n", variant.Name, case_, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
 	// fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnCaseError(variant *ai.LLMRequest, case_ *eval.Case, err error) {
-	fmt.Printf("%s |  — %v ... [\033[31mERR\033[0m]\n", variant.Model, err)
+func (e *LoggingSuiteEvents) OnCaseError(variant *eval.Variant, case_ *eval.Case, err error) {
+	fmt.Printf("%s |  — %v ... [\033[31mERR\033[0m]\n", variant.Name, err)
 	// fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnExpectationStart(variant *ai.LLMRequest, case_ *eval.Case, expectation expectations.Expectation) {
+func (e *LoggingSuiteEvents) OnExpectationStart(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnExpectationEnd(variant *ai.LLMRequest, case_ *eval.Case, expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationEnd(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation, err error) {
 	// fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
 }
 
-func (e *LoggingSuiteEvents) OnExpectationError(variant *ai.LLMRequest, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationError(variant *eval.Variant, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
 	fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", expectation)
 
 	var directive map[string]any

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/petrjanda/frax/pkg/ai"
-	"github.com/petrjanda/frax/pkg/eval"
-	"github.com/petrjanda/frax/pkg/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/eval"
+	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
 )
 
 func TestTableSuiteEvents(t *testing.T) {
@@ -20,16 +20,16 @@ func TestTableSuiteEvents(t *testing.T) {
 	}
 
 	// Create mock variants
-	variants := []*ai.LLMRequest{
-		ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")),
-		ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")),
+	variants := []*eval.Variant{
+		eval.NewVariant("gpt-3.5-turbo", nil, ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt"))),
+		eval.NewVariant("gpt-4", nil, ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt"))),
 	}
 
 	// Create table events
 	tableEvents := NewTableSuiteEvents()
 
 	// Create suite
-	suite := eval.NewSuite(tableEvents, cases, nil, variants)
+	suite := eval.NewSuite(tableEvents, cases, variants)
 
 	// Test OnSuiteStart
 	tableEvents.OnSuiteStart(suite)
@@ -44,7 +44,7 @@ func TestTableSuiteEvents(t *testing.T) {
 			caseErrors := []error{}
 			for _, expectation := range case_.Expectations {
 				// Simulate some passing and some failing
-				if variant.Model == "gpt-4" {
+				if variant.Name == "gpt-4" {
 					tableEvents.OnExpectationEnd(variant, case_, expectation, nil) // PASS
 				} else {
 					err := errors.New("test expectation failed")
@@ -70,7 +70,7 @@ func TestTableSuiteEvents(t *testing.T) {
 	for _, variant := range tableEventsImpl.variants {
 		if len(variant.Results) != expectedTests {
 			t.Errorf("Expected %d test results for variant %s, got %d",
-				expectedTests, variant.Variant.Model, len(variant.Results))
+				expectedTests, variant.Variant.Name, len(variant.Results))
 		}
 	}
 }

@@ -4,19 +4,30 @@ import (
 	"context"
 
 	"github.com/petrjanda/frax/pkg/ai"
-	"github.com/petrjanda/frax/pkg/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
 
 	_ "embed"
 )
 
+type Variant struct {
+	Name    string
+	LLM     ai.LLM
+	Request *ai.LLMRequest
+}
+
+func NewVariant(name string, llm ai.LLM, request *ai.LLMRequest) *Variant {
+	return &Variant{
+		Name:    name,
+		LLM:     llm,
+		Request: request,
+	}
+}
+
 type Suite struct {
 	Cases    []*Case
-	Model    ai.LLM
-	Variants []*ai.LLMRequest
-
-	Usage *ai.LLMUsage
-
-	events SuiteEvents
+	Variants []*Variant
+	Usage    *ai.LLMUsage
+	events   SuiteEvents
 }
 
 type SuiteEvents interface {
@@ -24,13 +35,13 @@ type SuiteEvents interface {
 	OnSuiteEnd(suite *Suite)
 	OnSuiteError(error error)
 
-	OnCaseStart(variant *ai.LLMRequest, case_ *Case)
-	OnCaseEnd(variant *ai.LLMRequest, case_ *Case, errors []error)
-	OnCaseError(variant *ai.LLMRequest, case_ *Case, error error)
+	OnCaseStart(variant *Variant, case_ *Case)
+	OnCaseEnd(variant *Variant, case_ *Case, errors []error)
+	OnCaseError(variant *Variant, case_ *Case, error error)
 
-	OnExpectationStart(variant *ai.LLMRequest, case_ *Case, expectation expectations.Expectation)
-	OnExpectationEnd(variant *ai.LLMRequest, case_ *Case, expectation expectations.Expectation, err error)
-	OnExpectationError(variant *ai.LLMRequest, case_ *Case, actual string, expectation expectations.Expectation, error error)
+	OnExpectationStart(variant *Variant, case_ *Case, expectation expectations.Expectation)
+	OnExpectationEnd(variant *Variant, case_ *Case, expectation expectations.Expectation, err error)
+	OnExpectationError(variant *Variant, case_ *Case, actual string, expectation expectations.Expectation, error error)
 }
 
 type SuiteResult struct {
@@ -57,15 +68,12 @@ func NewSuiteResult() *SuiteResult {
 	}
 }
 
-func NewSuite(events SuiteEvents, cases []*Case, model ai.LLM, req []*ai.LLMRequest) *Suite {
+func NewSuite(events SuiteEvents, cases []*Case, variants []*Variant) *Suite {
 	return &Suite{
 		Cases:    cases,
-		Model:    model,
-		Variants: req,
-
-		Usage: ai.NewLLMUsage(0, 0, 0),
-
-		events: events,
+		Variants: variants,
+		Usage:    ai.NewLLMUsage(0, 0, 0),
+		events:   events,
 	}
 }
 
@@ -78,12 +86,12 @@ func (s *Suite) Run(ctx context.Context) error {
 				ai.NewUserMessage(q.Input),
 			)
 
-			variant = variant.Clone(ai.WithHistory(history))
+			req := variant.Request.Clone(ai.WithHistory(history))
 
 			s.events.OnCaseStart(variant, q)
 
 			// Run the agent
-			response, err := s.Model.Invoke(ctx, variant)
+			response, err := variant.LLM.Invoke(ctx, req)
 
 			if err != nil {
 				s.events.OnCaseError(variant, q, err)

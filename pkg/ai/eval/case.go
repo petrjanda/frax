@@ -5,8 +5,7 @@ import (
 
 	_ "embed"
 
-	"github.com/petrjanda/frax/pkg/ai"
-	"github.com/petrjanda/frax/pkg/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
 )
 
 type Case struct {
@@ -53,7 +52,7 @@ type CaseResult struct {
 	Errors int
 }
 
-func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant *ai.LLMRequest, actual string) *CaseResult {
+func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant *Variant, actual string) *CaseResult {
 	errors := []error{}
 
 	for _, expectation := range c.Expectations {

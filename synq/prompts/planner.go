@@ -1,3 +1,10 @@
+package prompts
+
+import "github.com/petrjanda/frax/pkg/ai"
+
+var PlannerTask = ai.NewLLMRequest(
+	ai.WithModel("claude-4-sonnet"),
+	ai.WithSystem(`
 You are expert data engineer who turns plan text requests into directives that can be used to deploy data tests.
 		
 <task>
@@ -23,3 +30,7 @@ You are expert data engineer who turns plan text requests into directives that c
         Select all tables/entities that contain JOIN clauses: "entities": {"query": {"is_join": true}}
     </examples>
 </entity_selection>
+`),
+	ai.WithTemperature(0.0),
+	ai.WithMaxCompletionTokens(1000),
+)

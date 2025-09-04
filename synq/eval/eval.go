@@ -10,9 +10,9 @@ import (
 	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
 	"github.com/petrjanda/frax/pkg/ai/structured"
 
-	"github.com/petrjanda/frax/pkg/eval"
-	"github.com/petrjanda/frax/pkg/eval/events"
-	. "github.com/petrjanda/frax/pkg/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/eval"
+	"github.com/petrjanda/frax/pkg/ai/eval/events"
+	. "github.com/petrjanda/frax/pkg/ai/eval/expectations"
 
 	"github.com/petrjanda/frax/synq/dsl"
 	"github.com/petrjanda/frax/synq/prompts"
@@ -40,7 +40,9 @@ func main() {
 
 	// VARIANT
 
-	variants := []*ai.LLMRequest{
+	current := prompts.PlannerTask
+
+	variants := []*eval.Variant{
 		// ai.NewLLMRequest(
 		// 	ai.WithModel("claude-3-7-sonnet"),
 		// 	ai.WithSystem(prompts.PlannerSystem),
@@ -48,12 +50,8 @@ func main() {
 		// 	ai.WithMaxCompletionTokens(1000),
 		// ),
 
-		ai.NewLLMRequest(
-			ai.WithModel("claude-4-sonnet"),
-			ai.WithSystem(prompts.PlannerSystem),
-			ai.WithTemperature(0.0),
-			ai.WithMaxCompletionTokens(1000),
-		),
+		eval.NewVariant("current", structuredLLM, current),
+		eval.NewVariant("claude-3.7-sonnet", structuredLLM, current.Clone(ai.WithModel("claude-3-7-sonnet"))),
 
 		// ai.NewLLMRequest(
 		// 	ai.WithModel("claude-3-5-haiku"),
@@ -102,7 +100,7 @@ func main() {
 	}
 
 	suite := eval.NewSuite(
-		events.NewTableSuiteEvents(), cases, structuredLLM, variants,
+		events.NewTableSuiteEvents(), cases, variants,
 	)
 
 	if err := suite.Run(ctx); err != nil {
