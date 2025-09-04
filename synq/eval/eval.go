@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/adapters/openai"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 	"github.com/petrjanda/frax/synq/tasks"
 
 	"github.com/petrjanda/frax/pkg/ai/eval"
@@ -36,7 +37,7 @@ func main() {
 
 	current := tasks.PlannerTask
 
-	variants := []*eval.Variant{
+	variants := []workflows.Task{
 		// ai.NewLLMRequest(
 		// 	ai.WithModel("claude-3-7-sonnet"),
 		// 	ai.WithSystem(prompts.PlannerSystem),
@@ -44,8 +45,7 @@ func main() {
 		// 	ai.WithMaxCompletionTokens(1000),
 		// ),
 
-		eval.NewVariant("current", current),
-		eval.NewVariant("claude-3.7-sonnet", current), // current.Clone(workflows.WithRequest(current.Request.Clone(ai.WithModel("claude-3-7-sonnet")))),
+		current,
 
 		// ai.NewLLMRequest(
 		// 	ai.WithModel("claude-3-5-haiku"),

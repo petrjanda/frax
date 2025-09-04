@@ -6,6 +6,7 @@ import (
 	_ "embed"
 
 	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 )
 
 type Case struct {
@@ -52,7 +53,7 @@ type CaseResult struct {
 	Errors int
 }
 
-func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant *Variant, actual string) *CaseResult {
+func (c *Case) Eval(ctx context.Context, events SuiteEvents, variant workflows.Task, actual string) *CaseResult {
 	errors := []error{}
 
 	for _, expectation := range c.Expectations {

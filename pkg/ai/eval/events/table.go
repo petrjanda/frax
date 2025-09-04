@@ -9,6 +9,7 @@ import (
 	"github.com/petrjanda/frax/pkg/ai"
 	"github.com/petrjanda/frax/pkg/ai/eval"
 	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 )
 
 // TableSuiteEvents creates a table showing test results across variants.
@@ -31,14 +32,14 @@ type TestResult struct {
 
 // VariantResult tracks all test results for a single variant
 type VariantResult struct {
-	Variant *eval.Variant
+	Variant workflows.Task
 	Results map[string]*TestResult // key: caseAlias + "|" + expectationString
 	Summary *eval.SuiteResult
 }
 
 // TableSuiteEvents creates a table showing test results across variants
 type TableSuiteEvents struct {
-	variants map[string]*VariantResult // key: variant.Name
+	variants map[string]*VariantResult // key: variant.Name()
 	cases    []*eval.Case
 }
 
@@ -52,8 +53,8 @@ func NewTableSuiteEvents() eval.SuiteEvents {
 func (e *TableSuiteEvents) OnSuiteStart(s *eval.Suite) {
 	e.cases = s.Cases
 	// Initialize variant results
-	for _, variant := range s.Variants {
-		e.variants[variant.Name] = &VariantResult{
+	for _, variant := range s.Tasks {
+		e.variants[variant.Name()] = &VariantResult{
 			Variant: variant,
 			Results: make(map[string]*TestResult),
 			Summary: eval.NewSuiteResult(),
@@ -71,16 +72,16 @@ func (e *TableSuiteEvents) OnSuiteError(error error) {
 	// Handle suite-level errors if needed
 }
 
-func (e *TableSuiteEvents) OnCaseStart(variant *eval.Variant, case_ *eval.Case) {
+func (e *TableSuiteEvents) OnCaseStart(variant workflows.Task, case_ *eval.Case) {
 	// No action needed for case start
 
-	fmt.Printf("%s | case '%s' ...", variant.Name, case_)
+	fmt.Printf("%s | case '%s' ...", variant.Name(), case_)
 }
 
-func (e *TableSuiteEvents) OnCaseEnd(variant *eval.Variant, case_ *eval.Case, errors []error) {
+func (e *TableSuiteEvents) OnCaseEnd(variant workflows.Task, case_ *eval.Case, errors []error) {
 	fmt.Printf("  = [\033[32mOK\033[0m] total=%d, ok=%d, error=%d\n", len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
 
-	variantResult := e.variants[variant.Name]
+	variantResult := e.variants[variant.Name()]
 	if variantResult == nil {
 		return
 	}
@@ -94,10 +95,10 @@ func (e *TableSuiteEvents) OnCaseEnd(variant *eval.Variant, case_ *eval.Case, er
 	variantResult.Summary.Result(result)
 }
 
-func (e *TableSuiteEvents) OnCaseError(variant *eval.Variant, case_ *eval.Case, err error) {
+func (e *TableSuiteEvents) OnCaseError(variant workflows.Task, case_ *eval.Case, err error) {
 	fmt.Printf("  = [\033[31mERR\033[0m] %v\n", err)
 
-	variantResult := e.variants[variant.Name]
+	variantResult := e.variants[variant.Name()]
 	if variantResult == nil {
 		return
 	}
@@ -117,14 +118,14 @@ func (e *TableSuiteEvents) OnCaseError(variant *eval.Variant, case_ *eval.Case, 
 	variantResult.Summary.FatalResult()
 }
 
-func (e *TableSuiteEvents) OnExpectationStart(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation) {
-	fmt.Printf("%s | expectation '%s' ", variant.Name, expectation.String())
+func (e *TableSuiteEvents) OnExpectationStart(variant workflows.Task, case_ *eval.Case, expectation expectations.Expectation) {
+	fmt.Printf("%s | expectation '%s' ", variant.Name(), expectation.String())
 }
 
-func (e *TableSuiteEvents) OnExpectationEnd(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation, err error) {
+func (e *TableSuiteEvents) OnExpectationEnd(variant workflows.Task, case_ *eval.Case, expectation expectations.Expectation, err error) {
 	fmt.Printf("[\033[32mOK\033[0m]\n")
 
-	variantResult := e.variants[variant.Name]
+	variantResult := e.variants[variant.Name()]
 	if variantResult == nil {
 		return
 	}
@@ -138,10 +139,10 @@ func (e *TableSuiteEvents) OnExpectationEnd(variant *eval.Variant, case_ *eval.C
 	}
 }
 
-func (e *TableSuiteEvents) OnExpectationError(variant *eval.Variant, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
+func (e *TableSuiteEvents) OnExpectationError(variant workflows.Task, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
 	fmt.Printf("[\033[31mERR\033[0m] %v\n", err)
 
-	variantResult := e.variants[variant.Name]
+	variantResult := e.variants[variant.Name()]
 	if variantResult == nil {
 		return
 	}
@@ -180,7 +181,7 @@ func (e *TableSuiteEvents) printTable() {
 	// Print header
 	header := "Test Case"
 	for _, variant := range orderedVariants {
-		header += "\t" + string(variant.Variant.Name)
+		header += "\t" + string(variant.Variant.Name())
 	}
 	fmt.Fprintln(w, header)
 
@@ -228,7 +229,7 @@ func (e *TableSuiteEvents) printSummary() {
 			score = float64(summary.ExpectationsOk) / float64(summary.ExpectationsTotal) * 100
 		}
 
-		fmt.Printf("%s:", variant.Variant.Name)
+		fmt.Printf("%s:", variant.Variant.Name())
 		fmt.Printf(", cases total=%d, ok=%d, error=%d, fatal=%d",
 			summary.CasesTotal, summary.CasesOk, summary.CasesErrors, summary.CasesFatal)
 		fmt.Printf(", expectations total=%d, ok=%d, error=%d",

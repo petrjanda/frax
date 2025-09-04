@@ -21,9 +21,9 @@ func TestTableSuiteEvents(t *testing.T) {
 	}
 
 	// Create mock variants
-	variants := []*eval.Variant{
-		eval.NewVariant("gpt-3.5-turbo", workflows.NewTask("gpt-3.5-turbo", ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt")), nil)),
-		eval.NewVariant("gpt-4", workflows.NewTask("gpt-4", ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt")), nil)),
+	variants := []workflows.Task{
+		workflows.NewTask("gpt-3.5-turbo", ai.NewLLMRequest(ai.WithModel("gpt-3.5-turbo"), ai.WithSystem("Test prompt"))),
+		workflows.NewTask("gpt-4", ai.NewLLMRequest(ai.WithModel("gpt-4"), ai.WithSystem("Test prompt"))),
 	}
 
 	// Create table events
@@ -45,7 +45,7 @@ func TestTableSuiteEvents(t *testing.T) {
 			caseErrors := []error{}
 			for _, expectation := range case_.Expectations {
 				// Simulate some passing and some failing
-				if variant.Name == "gpt-4" {
+				if variant.Name() == "gpt-4" {
 					tableEvents.OnExpectationEnd(variant, case_, expectation, nil) // PASS
 				} else {
 					err := errors.New("test expectation failed")

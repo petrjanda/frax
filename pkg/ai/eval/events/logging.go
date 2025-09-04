@@ -6,6 +6,7 @@ import (
 
 	"github.com/petrjanda/frax/pkg/ai/eval"
 	"github.com/petrjanda/frax/pkg/ai/eval/expectations"
+	"github.com/petrjanda/frax/pkg/ai/workflows"
 )
 
 type LoggingSuiteEvents struct{}
@@ -36,29 +37,29 @@ func (e *LoggingSuiteEvents) OnSuiteError(error error) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnCaseStart(variant *eval.Variant, case_ *eval.Case) {
+func (e *LoggingSuiteEvents) OnCaseStart(variant workflows.Task, case_ *eval.Case) {
 	// fmt.Printf("%s | case '%s'\n", variant.Model, case_)
 }
 
-func (e *LoggingSuiteEvents) OnCaseEnd(variant *eval.Variant, case_ *eval.Case, errors []error) {
+func (e *LoggingSuiteEvents) OnCaseEnd(variant workflows.Task, case_ *eval.Case, errors []error) {
 	fmt.Printf("%s | case '%s' = total=%d, ok=%d, error=%d\n", variant.Name, case_, len(case_.Expectations), len(case_.Expectations)-len(errors), len(errors))
 	// fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnCaseError(variant *eval.Variant, case_ *eval.Case, err error) {
+func (e *LoggingSuiteEvents) OnCaseError(variant workflows.Task, case_ *eval.Case, err error) {
 	fmt.Printf("%s |  — %v ... [\033[31mERR\033[0m]\n", variant.Name, err)
 	// fmt.Println("")
 }
 
-func (e *LoggingSuiteEvents) OnExpectationStart(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation) {
+func (e *LoggingSuiteEvents) OnExpectationStart(variant workflows.Task, case_ *eval.Case, expectation expectations.Expectation) {
 	// @TODO
 }
 
-func (e *LoggingSuiteEvents) OnExpectationEnd(variant *eval.Variant, case_ *eval.Case, expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationEnd(variant workflows.Task, case_ *eval.Case, expectation expectations.Expectation, err error) {
 	// fmt.Printf("  — %v ... [\033[32mOK\033[0m]\n", expectation)
 }
 
-func (e *LoggingSuiteEvents) OnExpectationError(variant *eval.Variant, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
+func (e *LoggingSuiteEvents) OnExpectationError(variant workflows.Task, case_ *eval.Case, actual string, expectation expectations.Expectation, err error) {
 	fmt.Printf("  — %v ... [\033[31mERR\033[0m]\n", expectation)
 
 	var directive map[string]any

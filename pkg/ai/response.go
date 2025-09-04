@@ -38,6 +38,19 @@ func (r *LLMResponse) ToolCalls() []*ToolCall {
 	return toolCalls
 }
 
+func (r *LLMResponse) LastMessageAsText() *TextMessage {
+	if len(r.Messages) == 0 {
+		return nil
+	}
+
+	text, ok := r.Messages[len(r.Messages)-1].(*TextMessage)
+	if !ok {
+		return nil
+	}
+
+	return text
+}
+
 func (r *LLMResponse) SetUsage(usage *LLMUsage) {
 	r.Usage = usage
 }

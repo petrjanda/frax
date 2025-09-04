@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -58,8 +59,14 @@ func main() {
 			log.Fatalf("llm failed: %v", err)
 		}
 
+		var pirateTranslation PirateTranslation
+		err = json.Unmarshal([]byte(response.LastMessageAsText().Content), &pirateTranslation)
+		if err != nil {
+			log.Fatalf("failed unmarshalling: %v", err)
+		}
+
 		// Print the conversation
-		fmt.Printf("%s ==> %s\n", response.In, response.Out)
+		fmt.Printf("%s ==> %s\n", pirateTranslation.In, pirateTranslation.Out)
 
 	}
 }
